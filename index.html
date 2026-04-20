@@ -1,0 +1,864 @@
+import React, { useState, useEffect } from 'react';
+import { BookOpen, Clock, ArrowLeft, ChevronDown, FileText, Activity, Droplets, Shield, Syringe, Beaker, Search, X, CheckCircle, Database, ExternalLink, Copy, Check, Moon, Sun, Tag, Sparkles, Loader2, Share2, QrCode, Utensils, Heart } from 'lucide-react';
+
+// --- 資料整理 (加入 Design 標籤與精確臨床數據 Outcome，並優化為完美 12 分類) ---
+const nephrologyData = [
+  {
+    id: 1,
+    title: "1. 腎功能評估與重要臨床指引",
+    subtitle: "(eGFR & Guidelines)",
+    description: "這些文獻奠定了現代腎臟病學的診斷與分期基礎。",
+    icon: <FileText className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "Cockcroft-Gault", year: 1976, displayYear: "1976", journal: "Nephron", design: "Formula/Equation", articleTitle: "Prediction of creatinine clearance from serum creatinine", summary: "提出以血清肌酸酐、年齡與體重估算肌酸酐清除率的經典公式。", outcome: "Primary Outcome：公式推導結果為 CrCl = [(140 - 年齡) × 體重(kg)] / [72 × Scr(mg/dL)]。若為女性則總結果須再乘以 0.85。此公式奠定了後世所有藥物(尤為抗生素)劑量調整的黃金標準。" },
+      { title: "MDRD Study Equation", year: 1999, displayYear: "1999", journal: "Annals of Internal Medicine", design: "Formula/Equation", articleTitle: "A more accurate method to estimate glomerular filtration rate from serum creatinine: a new prediction equation", summary: "建立首個廣泛用於 CKD 分期的 eGFR 估算公式。", outcome: "Primary Outcome：基於 1628 名患者數據，建立 MDRD 簡化版公式：eGFR = 175 × (Scr)^-1.154 × (Age)^-0.203 × (0.742 若為女性) × (1.212 若為非裔)。" },
+      { title: "CKD-EPI Equation", year: 2009, displayYear: "2009", journal: "Annals of Internal Medicine", design: "Formula/Equation", articleTitle: "A new equation to estimate glomerular filtration rate", summary: "改善 MDRD 在腎功能正常或輕度受損者中的準確度。", outcome: "Primary Outcome：在 GFR >60 ml/min/1.73m² 的族群中，CKD-EPI 公式的估算偏差 (Median bias 3.5 vs 10.6) 顯著小於 MDRD 公式，大幅減少了對健康族群 CKD 的過度診斷。" },
+      { title: "CKD-EPI Race-Free", year: 2021, displayYear: "2021", journal: "The New England Journal of Medicine", design: "Formula/Equation", articleTitle: "New Creatinine- and Cystatin C–Based Equations to Estimate GFR without Race", summary: "移除種族變數，提出全新的 2021 CKD-EPI 公式。", outcome: "Primary Outcome：移除非裔種族係數，並結合 Cystatin C。新版 eGFRcr-cys 公式在中位數偏差為 0.0 ml/min，P30 準確度達 91%，證實移除種族變數仍能精準評估腎功能並促進醫療平權。" },
+      { title: "Schwartz Equation", year: 2009, displayYear: "2009", journal: "Journal of the American Society of Nephrology", design: "Formula/Equation", articleTitle: "New equations to estimate GFR in children with CKD", summary: "更新版的兒童 eGFR 估算公式 (CKiD cohort)。", outcome: "Primary Outcome：傳統常數從 0.55 下修。更新版床邊公式為 eGFR = 0.413 × 身高(cm) / 血清肌酸酐(mg/dL)。成為兒科腎病界廣泛使用的 eGFR 標準。" },
+      { title: "KDIGO CKD Classification", year: 2012, displayYear: "2012", journal: "Kidney International Supplements", design: "Clinical Guideline", articleTitle: "KDIGO 2012 Clinical Practice Guideline for the Evaluation and Management of Chronic Kidney Disease", summary: "確立以 GFR 與白蛋白尿 (CGA) 進行 CKD 風險分層的里程碑指引。", outcome: "Primary Outcome：確立 CGA 分期。GFR 分為 G1(≥90) 到 G5(<15)，白蛋白尿分為 A1(<30)、A2(30-300)、A3(>300 mg/g) 的二維風險矩陣 (Heat map)，精準預測預後與轉介時機。" },
+      { title: "KDIGO AKI Definition", year: 2012, displayYear: "2012", journal: "Kidney International Supplements", design: "Clinical Guideline", articleTitle: "KDIGO Clinical Practice Guideline for Acute Kidney Injury", summary: "統合 RIFLE 與 AKIN 標準，統一 AKI 診斷定義。", outcome: "Primary Outcome：定義 AKI 為 ① 48 小時內 Scr 絕對值上升 ≥0.3 mg/dL ② 7 天內 Scr 上升 ≥1.5 倍基期值 ③ 尿量 <0.5 ml/kg/hr 持續 ≥6 小時。" },
+      { title: "Bellomo/RIFLE Criteria", year: 2004, displayYear: "2004", journal: "Critical Care", design: "Consensus", articleTitle: "Acute renal failure - definition, outcome measures, animal models, fluid therapy and information technology needs: the Second International Consensus Conference of the ADQI Group", summary: "重症醫學與腎臟科合作，首度提出標準化 AKI 診斷分類。", outcome: "Primary Outcome：定義 RIFLE 五大階段：Risk (Scr ↑1.5倍), Injury (Scr ↑2倍), Failure (Scr ↑3倍或 ≥4mg/dL), Loss (需 RRT >4週), ESKD (需 RRT >3個月)。" },
+      { title: "KDIGO BP Guideline", year: 2021, displayYear: "2021", journal: "Kidney International", design: "Clinical Guideline", articleTitle: "KDIGO 2021 Clinical Practice Guideline for the Management of Blood Pressure in Chronic Kidney Disease", summary: "建議 CKD 患者嚴格控制血壓至 SBP < 120 mmHg 的核心指引。", outcome: "Primary Outcome：強烈建議 (Grade 1B) 針對未接受透析的成年 CKD 患者 (含 DM 與 non-DM)，若能忍受，應使用標準化診間血壓測量將靶標收縮壓 (SBP) 控制在 <120 mmHg。" },
+      { title: "KDIGO GN Guideline", year: 2021, displayYear: "2021", journal: "Kidney International", design: "Clinical Guideline", articleTitle: "KDIGO 2021 Clinical Practice Guideline for the Management of Glomerular Diseases", summary: "全面翻新各種腎絲球疾病的診斷與免疫抑制劑使用標準。", outcome: "Primary Outcome：正式納入抗 PLA2R 抗體作為膜性腎病變 (MN) 的血清學診斷與追蹤指標，並將 Rituximab 列為 MN 第一線治療選擇，全面革新了 GN 治療觀念。" }
+    ]
+  },
+  {
+    id: 2,
+    title: "2. 慢性腎臟病飲食與營養介入",
+    subtitle: "(CKD Diet & Nutrition)",
+    description: "探討低蛋白飲食、酮酸胺基酸與營養指引的里程碑。",
+    icon: <Utensils className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "MDRD Study (Dietary Phase)", year: 1994, displayYear: "1994", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "The effects of dietary protein restriction and blood-pressure control on the progression of chronic renal disease", summary: "醫學史上最大型評估「低蛋白飲食」對 CKD 惡化影響的經典試驗。", outcome: "Primary Outcome：極低蛋白飲食 (0.28 g/kg/d) 搭配酮酸補充，與一般低蛋白飲食 (0.58 g/kg/d) 相比，未能顯著減緩整體 eGFR 衰退的主要終點 (p=0.07)。但其龐大的數據庫為後續營養與 eGFR 研究奠定基礎。" },
+      { title: "Garneata et al. (VLPD + Ketoanalogues)", year: 2016, displayYear: "2016", journal: "Journal of the American Society of Nephrology", design: "RCT", articleTitle: "Ketoanalogue-Supplemented Vegetarian Very Low-Protein Diet and CKD Progression", summary: "重新確立「極低蛋白飲食搭配酮酸胺基酸」在晚期 CKD 延緩進入透析的實證地位。", outcome: "Primary Outcome：針對 eGFR <30 的非糖尿病患者，純素極低蛋白飲食 (0.3 g/kg/d) 加上酮酸胺基酸組，發生需啟動透析或 eGFR 下降 >50% 的比例僅 13%，驚人地低於對照組(常規低蛋白)的 42% (HR 0.13, p<0.001)。" },
+      { title: "KDOQI Nutrition Guideline in CKD", year: 2020, displayYear: "2020", journal: "American Journal of Kidney Diseases", design: "Clinical Guideline", articleTitle: "KDOQI Clinical Practice Guideline for Nutrition in CKD: 2020 Update", summary: "全球最具權威的 CKD 營養臨床實務指引 (2020年全面更新版)。", outcome: "Primary Outcome：強烈建議 CKD 3-5 期非透析患者，若未患有糖尿病，應限制蛋白質攝取至 0.55-0.60 g/kg/day，或採用極低蛋白飲食 (0.28-0.43 g/kg/day) 搭配酮酸胺基酸補充，以降低 ESRD 風險並改善症狀。" }
+    ]
+  },
+  {
+    id: 3,
+    title: "3. 慢性腎臟病、多囊腎與血壓控制",
+    subtitle: "(CKD, ADPKD & Hypertension)",
+    description: "探討血壓控制目標、多囊腎專一治療與 RAAS 阻斷劑的經典。",
+    icon: <Activity className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "MDRD Study", year: 1994, displayYear: "1994", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "The effects of dietary protein restriction and blood-pressure control on the progression of chronic renal disease", summary: "評估低蛋白飲食與嚴格血壓控制對 CKD 惡化影響的經典試驗。", outcome: "Primary Outcome：極低蛋白飲食 (0.28 g/kg/day) 未能顯著減緩整體 CKD 惡化；但在尿蛋白 >3g/day 的次族群中，嚴格血壓控制 (目標 MAP <92 mmHg) 顯著延緩 eGFR 衰退。" },
+      { title: "AASK", year: 2002, displayYear: "2002", journal: "JAMA", design: "RCT", articleTitle: "Effect of Blood Pressure Lowering and Antihypertensive Drug Class on Progression of Hypertensive Kidney Disease: Results from the AASK Trial", summary: "證實 ACEi 在非糖尿病、高血壓性 CKD 患者中的腎臟保護優勢。", outcome: "Primary Outcome：Ramipril (ACEi) 相較於 Metoprolol (BB) 使 ESKD/死亡風險降低 22% (p=0.04)；相較於 Amlodipine (CCB) 降低高達 38% (p=0.004)。確立了 ACEi 在非糖尿病 CKD 的第一線地位。" },
+      { title: "REIN", year: 1997, displayYear: "1997", journal: "The Lancet", design: "RCT", articleTitle: "Randomised placebo-controlled trial of effect of ramipril on decline in glomerular filtration rate and risk of terminal renal failure in proteinuric, non-diabetic nephropathy", summary: "證明 Ramipril 能顯著降低非糖尿病蛋白尿患者的 ESKD 風險。", outcome: "Primary Outcome：在尿蛋白 ≥3g/day 患者中，Ramipril 使 GFR 下降速度從每月 0.88 減緩至 0.53 ml/min，進展至 ESKD 的風險大幅降低 (18 例 vs 40 例，p=0.002)。" },
+      { title: "SPRINT", year: 2015, displayYear: "2015", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "A Randomized Trial of Intensive versus Standard Blood-Pressure Control", summary: "證實嚴格血壓控制 (<120 mmHg) 對高風險心血管患者 (含 CKD 次族群) 的益處。", outcome: "Primary Outcome：針對高心血管風險的非糖尿病患者，強化組 (SBP <120) 較標準組 (SBP <140) 顯著降低心血管複合終點風險 25% (HR 0.75, p<0.001)，全因死亡率降低 27%，但 AKI 風險略增 (HR 1.66)。" },
+      { title: "TEMPO 3:4", year: 2012, displayYear: "2012", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Tolvaptan in patients with autosomal dominant polycystic kidney disease", summary: "證實 V2 受體拮抗劑 (Tolvaptan) 能有效減緩早期 ADPKD 患者的囊泡生長與腎功能惡化。", outcome: "Primary Outcome：追蹤 3 年，Tolvaptan 組的總腎體積 (TKV) 年增長率為 2.8%，顯著低於安慰劑組的 5.5% (p<0.001)；且 eGFR 衰退斜率亦顯著減緩 (-2.72 vs -3.70 ml/min/yr, p<0.001)。確立了 Tolvaptan 在 ADPKD 的首選地位。" },
+      { title: "REPRISE", year: 2017, displayYear: "2017", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Tolvaptan in Later-Stage Autosomal Dominant Polycystic Kidney Disease", summary: "將 Tolvaptan 的療效與適應症拓展至晚期 (eGFR 25-65) 的 ADPKD 患者。", outcome: "Primary Outcome：1 年後的 eGFR 變化量。Tolvaptan 組的 eGFR 衰退幅度為 -2.34 ml/min/1.73m²，顯著優於安慰劑組的 -3.61 ml/min/1.73m² (p<0.001)，證實即使在較晚期 CKD，Tolvaptan 仍具穩定的腎臟保護效益。" },
+      { title: "HALT-PKD Trial A", year: 2014, displayYear: "2014", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Blood pressure in early autosomal dominant polycystic kidney disease", summary: "針對早期 ADPKD 患者，嚴格血壓控制可延緩左心室肥大，但對總腎體積影響有限。", outcome: "Primary Outcome：針對早期 ADPKD (eGFR >60)。嚴格血壓組 (95-110/60-75) 的總腎體積 (TKV) 年增長率為 5.6%，標準組為 6.6% (p=0.006)；左心室質量指數 (LVMI) 亦顯著改善，但 eGFR 衰退斜率無顯著差異。" },
+      { title: "HALT-PKD Trial B", year: 2014, displayYear: "2014", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Blood pressure in late autosomal dominant polycystic kidney disease", summary: "針對晚期 ADPKD，雙重 RAAS 阻斷並未優於單方。", outcome: "Primary Outcome：針對晚期 ADPKD (eGFR 25-60)。雙重阻斷 (Lisinopril + Telmisartan) 與單用 Lisinopril 相比，兩組的 eGFR 年衰退率分別為 -2.95 與 -3.07 ml/min/yr，並無統計學顯著差異 (p=0.52)。" },
+      { title: "ONTARGET", year: 2008, displayYear: "2008", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Telmisartan, Ramipril, or Both in Patients at High Risk for Vascular Events", summary: "證實 ACEi 併用 ARB 會增加腎功能惡化與高血鉀風險，改變雙重阻斷的臨床習慣。", outcome: "Primary Outcome：Telmisartan (80mg) 與 Ramipril (10mg) 的心血管療效相當；但合併使用雙藥不僅未降低 CV 事件，反而顯著增加進入透析的風險 (HR 1.09) 及急性腎功能惡化發生率。" },
+      { title: "ACCOMPLISH", year: 2008, displayYear: "2008", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Benazepril plus Amlodipine or Hydrochlorothiazide for Hypertension in High-Risk Patients", summary: "證實 ACEi + CCB 在減少心血管事件與腎臟終點上優於 ACEi + 利尿劑。", outcome: "Primary Outcome：ACEi + Amlodipine 組的心血管複合終點發生率為 9.6%，顯著低於 ACEi + HCTZ 組的 11.8% (HR 0.80, p<0.001)。試驗因療效差距過大而提前終止。" },
+      { title: "UKPDS 38", year: 1998, displayYear: "1998", journal: "BMJ", design: "RCT", articleTitle: "Tight blood pressure control and risk of macrovascular and microvascular complications in type 2 diabetes: UKPDS 38", summary: "確立嚴格血壓控制在減少第 2 型糖尿病微血管併發症 (含腎病變) 的重要性。", outcome: "Primary Outcome：嚴格血壓控制組 (實際達 <144/82) 較常規控制組 (<154/87)，顯著降低糖尿病相關死亡率達 32% (p=0.019)，且微血管併發症(含腎病變)風險下降達 37%。" },
+      { title: "CRIC Study", year: 2008, displayYear: "2008 起", journal: "Journal of the American Society of Nephrology", design: "Cohort Study", articleTitle: "The Chronic Renal Insufficiency Cohort (CRIC) Study: Design and Methods", summary: "針對 CKD 患者的大型世代研究，提供大量關於 CKD 惡化風險因子的流行病學證據。", outcome: "Primary Outcome：這是一項觀察性世代研究 (N=3939)。其後續發表大量論文，確認了 FGF23 升高、蛋白尿、非裔血統與左心室肥大等，皆為預測 CKD 惡化與心血管死亡的強烈獨立風險因子。" }
+    ]
+  },
+  {
+    id: 4,
+    title: "4. 傳統糖尿病腎病變",
+    subtitle: "(Classic Diabetic Kidney Disease)",
+    description: "確立 RAAS 阻斷劑為 DKD 標準治療的黃金文獻。",
+    icon: <Droplets className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "Captopril Trial (Lewis et al.)", year: 1993, displayYear: "1993", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "The effect of angiotensin-converting-enzyme inhibition on diabetic nephropathy", summary: "首度證實 ACEi 能延緩第 1 型糖尿病患者腎功能惡化。", outcome: "Primary Outcome：針對第 1 型 DM 合併蛋白尿 ≥500mg 患者。Captopril (25mg TID) 組發生血清肌酸酐倍增的風險降低達 48% (p=0.007)，且此腎臟保護效益獨立於血壓降低程度。" },
+      { title: "RENAAL", year: 2001, displayYear: "2001", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Effects of losartan on renal and cardiovascular outcomes in patients with type 2 diabetes and nephropathy", summary: "證實 Losartan 能降低伴有巨量蛋白尿的第 2 型糖尿病患者進展為 ESKD 的風險。", outcome: "Primary Outcome：針對 T2DM 合併巨量蛋白尿患者。Losartan (50-100mg) 較對照組顯著降低首要複合端點(Scr倍增、ESRD或死亡) 16% (p=0.02)；其中 ESRD 風險降低 28% (p=0.002)。" },
+      { title: "IDNT", year: 2001, displayYear: "2001", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Renoprotective effect of the angiotensin-receptor antagonist irbesartan in patients with nephropathy due to type 2 diabetes", summary: "證實 Irbesartan 在第 2 型糖尿病腎病變中，腎臟保護效果優於 Amlodipine 與安慰劑。", outcome: "Primary Outcome：Irbesartan (300mg) 組的腎臟複合終點風險較 Amlodipine (10mg) 組顯著降低 23% (p=0.006)，較安慰劑組降低 20% (p=0.02)。" },
+      { title: "IRMA-2", year: 2001, displayYear: "2001", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "The effect of irbesartan on the development of diabetic nephropathy in patients with type 2 diabetes", summary: "證明 Irbesartan 能有效預防微量蛋白尿進展為明顯的糖尿病腎病變。", outcome: "Primary Outcome：在 T2DM 微量蛋白尿患者中，Irbesartan 300mg 組進展為明顯糖尿病腎病變 (巨量蛋白尿) 的發生率僅為 5.2%，顯著低於安慰劑組的 14.9% (HR 0.30, p<0.001)。" },
+      { title: "MICRO-HOPE", year: 2000, displayYear: "2000", journal: "The Lancet", design: "RCT", articleTitle: "Effects of ramipril on cardiovascular and microvascular outcomes in people with diabetes mellitus: results of the HOPE study and MICRO-HOPE substudy", summary: "證實 Ramipril 能降低糖尿病患者的心血管與微血管風險。", outcome: "Primary Outcome：Ramipril (10mg) 較安慰劑顯著降低心肌梗塞、中風或 CV 死亡複合終點達 25% (p=0.0004)，並使明顯蛋白尿的發生率顯著降低 24% (p=0.027)。" },
+      { title: "ADVANCE", year: 2008, displayYear: "2008", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Intensive blood glucose control and vascular outcomes in patients with type 2 diabetes", summary: "探討密集血糖控制與常規血壓控制對糖尿病微血管併發症的影響。", outcome: "Primary Outcome：密集血糖控制 (達 HbA1c 6.5%) 較標準組 (7.3%) 顯著降低微血管併發症發生率 14% (p=0.01)，主要歸功於新發或惡化腎病變大幅降低了 21% (p=0.006)，大血管事件則無顯著差異。" },
+      { title: "VADT", year: 2008, displayYear: "2008", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Intensive glucose control and complications in American veterans with type 2 diabetes", summary: "探討強化血糖控制在退伍軍人糖尿病患者中的影響，對腎臟終點的益處有限。", outcome: "Primary Outcome：強化血糖控制組 (達 HbA1c 6.9%) 與標準組 (8.4%) 相比，在主要心血管複合終點上未達顯著差異 (HR 0.88, p=0.14)；對新發巨量蛋白尿的保護亦無顯著統計差異。" },
+      { title: "ACCORD", year: 2008, displayYear: "2008", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Effects of intensive glucose lowering in type 2 diabetes", summary: "發現過度嚴格的血糖控制反而增加第 2 型糖尿病患者的死亡率。", outcome: "Primary Outcome：強化血糖控制組 (目標 HbA1c <6.0%) 未能顯著減少主要 CV 事件 (HR 0.90, p=0.16)，且因全因死亡率意外上升達 22% (HR 1.22, p=0.04) 而導致試驗提前被安全終止。" },
+      { title: "VA NEPHRON-D", year: 2013, displayYear: "2013", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Combination angiotensin receptor blockade and angiotensin-converting enzyme inhibition in diabetic nephropathy", summary: "再次確認 ACEi + ARB 雙重阻斷在糖尿病腎病變中會增加 AKI 與高血鉀風險。", outcome: "Primary Outcome：雙重阻斷組 (Losartan 100mg + Lisinopril 10-40mg) 的主要 CV/Renal 複合終點無顯著改善，但 AKI 發生率 (12.2 vs 6.7 /100人年) 與高血鉀風險 (6.3 vs 2.6 /100人年) 劇增，試驗遭提前終止。" },
+      { title: "ALTITUDE", year: 2012, displayYear: "2012", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Cardiorenal end points in a trial of aliskiren for type 2 diabetes", summary: "證實直接腎素抑制劑 (Aliskiren) 併用 ACEi/ARB 在高風險糖尿病患者中弊大於利。", outcome: "Primary Outcome：Aliskiren (300mg) 併用 ACEi 或 ARB，未能減少主要心腎複合終點事件，反而導致高血鉀發生率顯著增加 (38.9% vs 28.8%) 且低血壓與 AKI 風險上升，試驗遭提前終止。" }
+    ]
+  },
+  {
+    id: 5,
+    title: "5. 跨時代新藥與新型結合劑",
+    subtitle: "(SGLT2i, GLP-1RA, nsMRA & Novel Binders)",
+    description: "近十年徹底改寫腎臟科學教科書的重大突破。",
+    icon: <Shield className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "EMPA-REG OUTCOME", year: 2015, displayYear: "2015", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Empagliflozin, Cardiovascular Outcomes, and Mortality in Type 2 Diabetes", subCategory: "SGLT2i (鈉-葡萄糖協同轉運蛋白2抑制劑)", summary: "首個證實 SGLT2i (Empagliflozin) 具備心血管及腎臟次要終點保護作用的試驗。", outcome: "Primary Outcome：Empagliflozin (10/25mg) 顯著降低主要心血管複合終點(MACE-3) 14% (HR 0.86)。次要腎臟終點：發生新發或惡化腎病變風險驚人降低 39% (HR 0.61, p<0.001)，Scr 倍增風險降低 44%。" },
+      { title: "CANVAS Program", year: 2017, displayYear: "2017", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Canagliflozin and Cardiovascular and Renal Events in Type 2 Diabetes", subCategory: "SGLT2i (鈉-葡萄糖協同轉運蛋白2抑制劑)", summary: "確立 Canagliflozin 在降低心血管事件與延緩白蛋白尿進展的效果。", outcome: "Primary Outcome：Canagliflozin 顯著降低心血管複合終點(MACE) 14% (HR 0.86, p=0.02)。腎臟探索性終點顯示，蛋白尿進展減少 27%，eGFR 下降、ESKD或腎臟死亡的複合風險降低 40% (HR 0.60)。" },
+      { title: "CREDENCE", year: 2019, displayYear: "2019", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Canagliflozin and Renal Outcomes in Type 2 Diabetes and Nephropathy", subCategory: "SGLT2i (鈉-葡萄糖協同轉運蛋白2抑制劑)", summary: "首個以「腎臟硬端點」為主要結果的 SGLT2i 試驗，證實 Canagliflozin 對巨量蛋白尿 DKD 的療效。", outcome: "Primary Outcome：納入 eGFR 30-90 且 UACR 300-5000 的 T2DM 患者。Canagliflozin 100mg 顯著降低 ESKD、Scr倍增、心腎死亡複合終點達 30% (HR 0.70, p=0.00001)，試驗因療效顯著提前終止。" },
+      { title: "DAPA-CKD", year: 2020, displayYear: "2020", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Dapagliflozin in Patients with Chronic Kidney Disease", subCategory: "SGLT2i (鈉-葡萄糖協同轉運蛋白2抑制劑)", summary: "將 SGLT2i 的適應症擴展至「非糖尿病」的 CKD 患者。", outcome: "Primary Outcome：納入 eGFR 25-75 且 UACR 200-5000 (含或不含糖尿病) 的 CKD 患者。Dapagliflozin 10mg 顯著降低腎病惡化 (eGFR下降≥50%) 與心腎死亡複合終點達 39% (HR 0.61, p<0.001)，全因死亡率降低 31%。" },
+      { title: "EMPA-KIDNEY", year: 2022, displayYear: "2022", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Empagliflozin in Patients with Chronic Kidney Disease", subCategory: "SGLT2i (鈉-葡萄糖協同轉運蛋白2抑制劑)", summary: "進一步將 SGLT2i 的保護效益拓展至 eGFR 較低且無微量蛋白尿的 CKD 族群。", outcome: "Primary Outcome：納入 eGFR 20-45 (無 UACR 限制) 或 45-90 (UACR ≥200) 的 CKD 患者。Empagliflozin 10mg 顯著降低腎臟惡化或 CV 死亡的複合風險達 28% (HR 0.72, p<0.001)。" },
+      { title: "FIDELIO-DKD", year: 2020, displayYear: "2020", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Effect of Finerenone on Chronic Kidney Disease Outcomes in Type 2 Diabetes", subCategory: "nsMRA (非類固醇礦物皮質素受體拮抗劑)", summary: "證實非類固醇 MRA (Finerenone) 能降低 DKD 患者的腎臟與心血管事件風險。", outcome: "Primary Outcome：納入 T2DM 合併 CKD 患者。Finerenone 顯著降低腎臟複合硬端點(腎衰竭、eGFR持續下降≥40%或腎臟死亡) 風險達 18% (HR 0.82, p=0.001)；因高血鉀停藥的比例為 2.3% vs 0.9%。" },
+      { title: "FIGARO-DKD", year: 2021, displayYear: "2021", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Cardiovascular Events with Finerenone in Kidney Disease and Type 2 Diabetes", subCategory: "nsMRA (非類固醇礦物皮質素受體拮抗劑)", summary: "確立 Finerenone 在早期 DKD 患者中的心血管保護效益。", outcome: "Primary Outcome：主要針對心血管終點：Finerenone 10-20mg 顯著降低 CV 死亡或非致命 CV 事件的複合風險達 13% (HR 0.87, p=0.03)，進一步確立了其在早期 DKD 的保護地位。" },
+      { title: "FLOW", year: 2024, displayYear: "2024", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Effects of Semaglutide on Chronic Kidney Disease in Patients with Type 2 Diabetes", subCategory: "GLP-1RA (類升糖素胜肽-1受體促效劑)", summary: "首個證實 GLP-1RA (Semaglutide) 能顯著降低第 2 型糖尿病合併 CKD 患者腎臟硬端點的里程碑試驗。", outcome: "Primary Outcome：發生腎衰竭、eGFR 下降 ≥50% 或死於腎臟/心血管疾病的複合終點。Semaglutide 顯著降低此複合終點風險達 24%，全因死亡率亦降低 20%。" },
+      { title: "LEADER", year: 2016, displayYear: "2016", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Liraglutide and Cardiovascular Outcomes in Type 2 Diabetes", subCategory: "GLP-1RA (類升糖素胜肽-1受體促效劑)", summary: "顯示 Liraglutide 能降低心血管風險，並附帶減少新發大巨量蛋白尿的效益。", outcome: "Primary Outcome：Liraglutide 1.8mg 顯著降低主要心血管不良事件 (MACE-3) 達 13% (HR 0.87, p=0.01)；次要微血管終點分析顯示，新發或惡化腎病變風險顯著降低 22% (HR 0.78, p=0.003)。" },
+      { title: "SUSTAIN-6", year: 2016, displayYear: "2016", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Semaglutide and Cardiovascular Outcomes in Patients with Type 2 Diabetes", subCategory: "GLP-1RA (類升糖素胜肽-1受體促效劑)", summary: "證實 Semaglutide 可改善第 2 型糖尿病患者的心血管與腎臟綜合終點。", outcome: "Primary Outcome：Semaglutide (0.5mg/1.0mg) 顯著降低 MACE 複合事件發生率達 26% (HR 0.74, p<0.001)；且次要腎臟終點(新發或惡化腎病變)風險大幅降低 36% (HR 0.64, p=0.005)。" },
+      { title: "SURPASS-CVOT", year: 2025, displayYear: "2025", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Tirzepatide versus Dulaglutide for Major Cardiovascular Events", subCategory: "GLP-1RA (類升糖素胜肽-1受體促效劑)", summary: "首個採用活性藥物對照的大型心血管結果試驗，比較雙重 GIP/GLP-1 受體促效劑 (Tirzepatide) 與 GLP-1RA (Dulaglutide) 在第 2 型糖尿病合併 ASCVD 患者中的療效。", outcome: "Primary Outcome：Tirzepatide (最高15mg) 達成 MACE-3 對 Dulaglutide (1.5mg) 的非劣效性標準 (HR 0.92)。關鍵次要終點(涵蓋 MACE-3、心衰竭住院與腎臟硬端點的綜合指標) 更顯著降低風險 14% (HR 0.86, p=0.003)。" },
+      { title: "OPAL-HK", year: 2015, displayYear: "2015", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Patiromer in patients with kidney disease and hyperkalemia receiving RAAS inhibitors", subCategory: "新型鉀離子結合劑 (K+ Binders)", summary: "證實新型鉀離子結合劑 (Patiromer) 能安全降鉀，使 CKD 患者得以持續使用 RAAS 阻斷劑。", outcome: "Primary Outcome：第 4 週時血鉀平均下降 -1.01 mEq/L (p<0.001)。隨後的隨機停藥期 (Withdrawal phase)，繼續使用 Patiromer 的患者僅 15% 復發高血鉀，而改用安慰劑者高達 60% 復發 (p<0.001)。" },
+      { title: "HARMONIZE", year: 2014, displayYear: "2014", journal: "JAMA", design: "RCT", articleTitle: "Sodium zirconium cyclosilicate in hyperkalemia", subCategory: "新型鉀離子結合劑 (K+ Binders)", summary: "證實 SZC (Lokelma) 能夠快速且持續地矯正高血鉀，且耐受性良好。", outcome: "Primary Outcome：急性期給予 SZC 10g TID，48 小時內有 98% 患者血鉀恢復正常。維持期中，SZC (5g, 10g, 15g QD) 各劑量組在第 8 至 29 天的血鉀水平均顯著穩定且低於安慰劑組 (p<0.001)。" }
+    ]
+  },
+  {
+    id: 6,
+    title: "6. A 型免疫球蛋白腎病變與病理學",
+    subtitle: "(IgAN & Renal Pathology)",
+    description: "包含您可能在病理簡報中常引用的經典分類與最新標靶藥物。",
+    icon: <Beaker className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "Oxford Classification of IgAN", year: 2009, displayYear: "2009", journal: "Kidney International", design: "Validation Study", articleTitle: "The Oxford classification of IgA nephropathy: rationale, clinicopathological correlations, and classification", summary: "確立 MEST 分數（後加入 C）的病理分類系統，為 IgAN 預後評估的黃金標準。", outcome: "Primary Outcome：確立四大病理獨立預後預測因子 (MEST)：M (Mesangial hypercellularity >50%), E (Endocapillary hypercellularity), S (Segmental sclerosis), T (Tubular atrophy/IF >25% 或 >50%)。其預測 eGFR 衰退的準確度獨立於臨床變數。" },
+      { title: "Pozzi Steroid Trial", year: 1999, displayYear: "1999", journal: "The Lancet", design: "RCT", articleTitle: "Corticosteroids in IgA nephropathy: a randomised controlled trial", summary: "早期證實六個月類固醇療程能保護高風險 IgAN 患者腎功能的經典研究。", outcome: "Primary Outcome：前 6 個月使用 IV Methylprednisolone 1g 連續 3 天 (第1,3,5個月) 搭配口服 Prednisolone 0.5 mg/kg QOD。追蹤 10 年後，Scr 倍增風險從對照組的 33% 劇降至治療組的 13% (p=0.002)。" },
+      { title: "STOP-IgAN", year: 2015, displayYear: "2015", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Intensive Supportive Care plus Immunosuppression in IgA Nephropathy", summary: "顯示在優化支持性治療下，額外增加免疫抑制劑對 IgAN 腎功能保護並無顯著益處。", outcome: "Primary Outcome：在 3 年追蹤期內，加入免疫抑制劑 (eGFR>30者給予 Cyc/Aza) 雖使臨床完全緩解率高於單純優化支持組 (17% vs 5%, p=0.01)，但對延緩 eGFR 衰退 (每年 -1.5 ml/min) 無顯著差異，且嚴重感染增加。" },
+      { title: "TESTING", year: 2017, displayYear: "2017/2022", journal: "JAMA", design: "RCT", articleTitle: "Effect of Oral Methylprednisolone on Clinical Outcomes in Patients With IgA Nephropathy: The TESTING Randomized Clinical Trial", summary: "確立口服 Methylprednisolone 能降低 IgAN 腎功能衰退，但需注意減量以平衡感染風險。", outcome: "Primary Outcome：原 0.6-0.8 mg/kg/d 劑量因嚴重感染提早終止。調降劑量為 0.4 mg/kg/d (最高32mg) + PCP 預防後，口服類固醇顯著降低主要腎臟複合終點 (Scr降低40%、腎衰竭或死於腎病) 達 47% (HR 0.53, p<0.001)。" },
+      { title: "VALIGA Cohort", year: 2014, displayYear: "2014", journal: "Kidney International", design: "Cohort Study", articleTitle: "Validation of the Oxford classification of IgA nephropathy in cohorts with different presentations and treatments", summary: "歐洲大型世代研究，驗證牛津分類 (Oxford MEST) 的臨床預測價值。", outcome: "Primary Outcome：在 1147 名歐洲患者的觀察世代中，驗證了 MEST 分數即使在廣泛接受 RAS 阻斷劑及類固醇治療的患者群中，仍具有預測 eGFR 衰退斜率的獨立高度預測價值。" },
+      { title: "NefIgArd", year: 2023, displayYear: "2023", journal: "The Lancet", design: "RCT", articleTitle: "Efficacy and safety of a targeted-release formulation of budesonide in patients with primary IgA nephropathy (NefIgArd)", summary: "證實標靶釋放型 Budesonide (Nefecon) 能顯著降低 IgAN 蛋白尿並保護 eGFR。", outcome: "Primary Outcome：使用針對迴盲瓣 Peyer's patch 釋放的 Nefecon 16 mg/d 治療 9 個月。在 2 年追蹤期時，Nefecon 組的 eGFR 年衰退斜率為 -2.47 ml/min/1.73m²，顯著優於安慰劑組的 -7.52 (p<0.0001)。" },
+      { title: "PROTECT", year: 2023, displayYear: "2023", journal: "The Lancet", design: "RCT", articleTitle: "Sparsentan versus Irbesartan in IgA Nephropathy", summary: "證實雙重內皮素/血管張力素受體拮抗劑 (Sparsentan) 降蛋白尿效果優於 Irbesartan。", outcome: "Primary Outcome：治療 36 週後，Sparsentan (400mg) 組的尿蛋白 (UPCR) 顯著下降了 49.8%，而 Irbesartan (300mg) 組僅下降 15.1% (p<0.0001)。2 年 eGFR 斜率亦有延緩趨勢。" },
+      { title: "APPLAUSE-IgAN", year: 2024, displayYear: "2024", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Iptacopan for the Treatment of IgA Nephropathy", summary: "證實口服替代補體途徑 B 因子抑制劑 (Iptacopan) 對 IgAN 的療效。", outcome: "Primary Outcome：Iptacopan (200mg BID) 治療 9 個月後，相較於安慰劑，能顯著且臨床上有意義地降低 IgAN 患者的 UPCR 達 38.3% (p<0.001)，為首個成功達標的補體標靶口服藥物。" },
+      { title: "ENVISION Trial", year: 2023, displayYear: "2023", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "A Phase 2 Trial of Sibeprenlimab in Patients with IgA Nephropathy", summary: "評估抗 APRIL 單株抗體 (Sibeprenlimab) 治療高風險 IgA 腎病變患者的第二期試驗。", outcome: "Primary Outcome：第 12 個月時的 24 小時尿蛋白對肌酸酐比值 (uPCR) 降幅。Sibeprenlimab (8 mg/kg) 組顯著下降達 62.0%，遠優於安慰劑組的 20.0%；且 eGFR 衰退顯著減緩 (-1.5 vs -7.4 ml/min/1.73m²)。" },
+      { title: "DAPA-CKD IgAN Subgroup", year: 2021, displayYear: "2021", journal: "Kidney International", design: "Post-hoc Analysis", articleTitle: "Dapagliflozin in patients with IgA nephropathy", summary: "確立 SGLT2i 在 IgAN 患者中強大的抗蛋白尿與腎臟保護作用。", outcome: "Primary Outcome：針對 DAPA-CKD 中 270 名切片確診 IgAN 的次族群分析。Dapagliflozin 10mg 使 IgAN 專一性複合硬端點 (eGFR↓≥50%, ESRD, 死亡) 風險驚人地降低了 71% (HR 0.29, p=0.005)。" },
+      { title: "VISION Study", year: 2021, displayYear: "2021", journal: "Journal of the American Society of Nephrology", design: "Cohort Study", articleTitle: "Validation of the Oxford Classification of IgA Nephropathy With Crescentic Lesions", summary: "針對牛津分類中新月體 (C lesion) 的國際大型預後驗證研究。", outcome: "Primary Outcome：證實病理上即使只有 1 個新月體 (C1, <25%) 或新月體佔比超過 25% (C2) 均與較差的腎臟存活率獨立相關，正式推動將 C (Crescent) 納入 MEST-C 分類系統。" }
+    ]
+  },
+  {
+    id: 7,
+    title: "7. 膜性腎病變、微小病變與 FSGS",
+    subtitle: "(MN, MCD & FSGS)",
+    description: "自抗原發現到去類固醇化的臨床進展。",
+    icon: <Syringe className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "Beck et al. PLA2R Discovery", year: 2009, displayYear: "2009", journal: "The New England Journal of Medicine", design: "Basic Science", articleTitle: "M-Type Phospholipase A2 Receptor as Target Antigen in Idiopathic Membranous Nephropathy", subCategory: "MN (膜性腎病變)", summary: "發現原發性 MN 的核心自體抗原 PLA2R，徹底改變 MN 診斷與病理免疫螢光判讀。", outcome: "Primary Outcome：於西方墨點法及免疫螢光染色中發現，高達 70% (26/37) 的原發性膜性腎病變患者血清中，存在對抗足細胞上的 M 型 PLA2R 受體的特異性 IgG4 自體抗體。" },
+      { title: "THSD7A Discovery", year: 2014, displayYear: "2014", journal: "The New England Journal of Medicine", design: "Basic Science", articleTitle: "Thrombospondin Type-1 Domain-Containing 7A in Idiopathic Membranous Nephropathy", subCategory: "MN (膜性腎病變)", summary: "發現 THSD7A 為原發性膜性腎病變的第二個主要自體抗原，且常與惡性腫瘤相關。", outcome: "Primary Outcome：在 PLA2R 陰性的原發性 MN 患者中，發現約 2.5-10% 具有對抗 THSD7A 的特異性 IgG4 自體抗體，開啟了 MN 次分類與癌症篩檢的新視角。" },
+      { title: "NELL-1 Discovery", year: 2020, displayYear: "2020", journal: "Kidney International", design: "Basic Science", articleTitle: "Neural epidermal growth factor-like 1 protein (NELL-1) associated membranous nephropathy", subCategory: "MN (膜性腎病變)", summary: "確立 NELL-1 為 PLA2R 陰性膜性腎病變中最常見的新型自體抗原之一，具高度癌症關聯性。", outcome: "Primary Outcome：質譜分析確認 NELL-1 為 MN 的標靶抗原，約佔所有 PLA2R 陰性 MN 的 16%。其臨床特徵為常伴隨潛在的惡性腫瘤，推動了病理診斷常規染色的擴充。" },
+      { title: "Ponticelli Regimen", year: 1984, displayYear: "1984", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Controlled trial of methylprednisolone and chlorambucil in idiopathic membranous nephropathy", subCategory: "MN (膜性腎病變)", summary: "確立類固醇與 Chlorambucil 交替使用治療原發性 MN 的經典療程。", outcome: "Primary Outcome：交替給予 IV/Oral 類固醇 (月 1,3,5) 與口服 Chlorambucil 0.2mg/kg (月 2,4,6) 共 6 個月。10 年追蹤顯示，治療組免於透析的腎臟存活率高達 92%，遠高於對照組的 60% (p<0.05)。" },
+      { title: "MENTOR", year: 2019, displayYear: "2019", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Rituximab or Cyclosporine in the Treatment of Membranous Nephropathy", subCategory: "MN (膜性腎病變)", summary: "證實 Rituximab 在治療 MN 上不劣於，甚至在維持緩解上優於 Cyclosporine。", outcome: "Primary Outcome：Rituximab (1g day 1, 15) 對比 Cyclosporine (3.5-5 mg/kg)。在 24 個月時，Rituximab 組維持完全或部分緩解的比例達 60%，顯著優於 Cyclosporine 組的 20% (多在停藥後復發, p<0.001)。" },
+      { title: "STARMEN", year: 2020, displayYear: "2020", journal: "Journal of the American Society of Nephrology", design: "RCT", articleTitle: "Sequential Treatment with Tacrolimus and Rituximab versus Alternating Corticosteroids and Cyclophosphamide in Primary Membranous Nephropathy", subCategory: "MN (膜性腎病變)", summary: "比較 Tacrolimus + Rituximab 與傳統 Ponticelli 療程，發現後者在 MN 緩解率上仍具優勢。", outcome: "Primary Outcome：Tacrolimus (0.05 mg/kg/d) 搭配 Rituximab (1g 月份 6) 與 Ponticelli-CYC 療程相比，在 24 個月時的緩解率意外較低 (58% vs 82%, p=0.002)，未達非劣效性標準。" },
+      { title: "RI-CYCLO", year: 2021, displayYear: "2021", journal: "Journal of the American Society of Nephrology", design: "RCT", articleTitle: "Rituximab or Cyclophosphamide in the Treatment of Membranous Nephropathy: The RI-CYCLO Randomized Trial", subCategory: "MN (膜性腎病變)", summary: "Rituximab 與 Cyclophosphamide 治療 MN 的非劣效性試驗。", outcome: "Primary Outcome：Rituximab (1g day 1, 15) 與 Cyclophosphamide (2 mg/kg/d 搭配類固醇 x 6個月) 相比，24 個月的完全或部分緩解率 (62% vs 63%) 統計上無法證明任一組具非劣效性，但兩者安全性相近。" },
+      { title: "Cattran FSGS Classification", year: 2004, displayYear: "2004", journal: "Kidney International", design: "Classification", articleTitle: "A working proposal for a morphologic classification of focal segmental glomerulosclerosis", subCategory: "FSGS (局部節段性腎絲球硬化症)", summary: "提出 FSGS 的哥倫比亞病理分類 (Columbia Classification：NOS, Tip, Collapsing, Cellular, Perihilar)。", outcome: "Primary Outcome：確立基於光學顯微鏡的五種形態學變異型。預後與治療反應差異極大：Tip variant 預後最好且對類固醇反應佳，而 Collapsing variant 預後最差且常進展為 ESRD。" },
+      { title: "DUET", year: 2018, displayYear: "2018", journal: "Journal of the American Society of Nephrology", design: "RCT", articleTitle: "Sparsentan in Patients with Primary Focal Segmental Glomerulosclerosis: Results from the DUET Trial", subCategory: "FSGS (局部節段性腎絲球硬化症)", summary: "Sparsentan 治療原發性 FSGS 的早期成功試驗。", outcome: "Primary Outcome：在原發性 FSGS 中，雙重內皮素/血管張力素受體拮抗劑 (Sparsentan) 治療 8 週後，蛋白尿 (UPCR) 下降幅度達 44.8%，顯著優於 Irbesartan (300mg) 活性對照組的 18.5% (p=0.006)。" },
+      { title: "DUPLEX", year: 2023, displayYear: "2023", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Sparsentan in Patients with Primary Focal Segmental Glomerulosclerosis", subCategory: "FSGS (局部節段性腎絲球硬化症)", summary: "雖然 Sparsentan 降蛋白尿效果良好，但在 FSGS eGFR 最終斜率上未達統計顯著差異。", outcome: "Primary Outcome：在 108 週時的確診 eGFR 衰退斜率 (Total slope)。Sparsentan 雖在初期達成較高比例的部分緩解，但 108 週的 eGFR 年衰退斜率 (-4.8 vs -5.7 ml/min/yr) 與 Irbesartan 相比未達統計學顯著差異 (p=0.35)。" },
+      { title: "FSGS Clinical Trial", year: 2011, displayYear: "2011", journal: "Kidney International", design: "RCT", articleTitle: "Mycophenolate Mofetil vs Cyclosporine in Steroid-Resistant Focal Segmental Glomerulosclerosis", subCategory: "FSGS (局部節段性腎絲球硬化症)", summary: "比較 Mycophenolate Mofetil 與 Cyclosporine 治療類固醇抗拒型 FSGS 的療效（兩者無顯著差異）。", outcome: "Primary Outcome：在類固醇抗拒型 FSGS 中，MMF (1g BID + 高劑量 Dexamethasone) 與 Cyclosporine (目標谷值 100-250) 在治療 52 週時的部分或完全緩解率為 33% vs 46%，兩者無統計學顯著差異 (p=0.15)。" },
+      { title: "Waldman MCD Cohort", year: 2007, displayYear: "2007", journal: "Journal of the American Society of Nephrology", design: "Cohort Study", articleTitle: "Adult Minimal-Change Disease: Clinical Characteristics, Treatment, and Outcomes", subCategory: "MCD (微小病變腎病變)", summary: "探討成人微小病變腎病變 (MCD) 類固醇反應率與復發特徵的經典文獻。", outcome: "Primary Outcome：在 95 名成人 MCD 患者中，使用高劑量類固醇 (1 mg/kg/d) 治療的完全緩解率高達 75-80%。然而，高達 56-76% 的患者在減藥或停藥後會經歷頻繁復發或產生類固醇依賴性。" }
+    ]
+  },
+  {
+    id: 8,
+    title: "8. 狼瘡性腎炎與 ANCA 血管炎",
+    subtitle: "(LN & ANCA Vasculitis)",
+    description: "風濕免疫與腎臟學交界的重症治療基石。",
+    icon: <Shield className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "ALMS", year: 2009, displayYear: "2009", journal: "Journal of the American Society of Nephrology", design: "RCT", articleTitle: "Mycophenolate Mofetil versus Cyclophosphamide for Induction Treatment of Lupus Nephritis", subCategory: "LN (狼瘡性腎炎)", summary: "確立 Mycophenolate Mofetil (MMF) 在狼瘡性腎炎誘導期療效與 Cyclophosphamide 相當。", outcome: "Primary Outcome：目標為第 24 週達到預定臨床反應 (Scr穩定、蛋白尿↓、尿沉渣改善) 的比例。MMF (目標 3g/d) 組為 56.2%，IV Cyclophosphamide (0.5-1.0 g/m²/mo) 組為 53.0%，確立 MMF 誘導治療的非劣效性地位。" },
+      { title: "MAINTAIN", year: 2010, displayYear: "2010", journal: "Annals of the Rheumatic Diseases", design: "RCT", articleTitle: "Mycophenolate Mofetil versus Azathioprine for Maintenance Therapy of Lupus Nephritis", subCategory: "LN (狼瘡性腎炎)", summary: "比較 Azathioprine 與 MMF 在狼瘡性腎炎維持期治療的差異。", outcome: "Primary Outcome：經 CYC 誘導緩解後，維持期使用 MMF (目標 2g/d) 與 AZA (目標 2 mg/kg/d) 的首次腎臟復發時間。53 個月追蹤顯示，兩組累積復發率 (19% vs 25%) 並無統計學顯著差異 (p=0.33)。" },
+      { title: "BLISS-LN", year: 2020, displayYear: "2020", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Two-Year, Randomized, Controlled Trial of Belimumab in Lupus Nephritis", subCategory: "LN (狼瘡性腎炎)", summary: "證實 Belimumab 附加於標準治療能提高活動性狼瘡性腎炎的腎臟緩解率。", outcome: "Primary Outcome：Belimumab (10 mg/kg IV monthly) 附加於標準治療 (CYC 或 MMF)，在第 104 週時達到主要療效腎臟反應 (PERR，含 UPC ≤0.7 且 eGFR 不惡化) 的比例達 43.0%，顯著優於安慰劑組的 32.3% (p=0.03)。" },
+      { title: "AURORA 1", year: 2021, displayYear: "2021", journal: "The Lancet", design: "RCT", articleTitle: "Voclosporin for lupus nephritis: a randomised, double-blind, placebo-controlled, phase 3 trial", subCategory: "LN (狼瘡性腎炎)", summary: "證實新一代 CNI (Voclosporin) 在狼瘡性腎炎誘導緩解的卓越療效。", outcome: "Primary Outcome：Voclosporin (23.7 mg BID) 結合 MMF 及低劑量類固醇，第 52 週的完全腎臟緩解率 (CRR，含 UPCR ≤0.5 且 eGFR ≥60) 高達 40.8%，顯著超越對照組的 22.5% (p<0.0001)。" },
+      { title: "LUNAR", year: 2012, displayYear: "2012", journal: "Arthritis & Rheumatism", design: "RCT", articleTitle: "Efficacy and Safety of Rituximab in Patients with Active Proliferative Lupus Nephritis: The Lupus Nephritis Assessment with Rituximab Study", subCategory: "LN (狼瘡性腎炎)", summary: "Rituximab 加入 MMF 與類固醇治療 LN，雖未達主要終點，但開啟了標靶 B 細胞治療的探討。", outcome: "Primary Outcome：第 52 週的完全或部分腎臟緩解率。Rituximab (1g d1, d15, d168, d182) 雖使抗 dsDNA 下降及 C3/C4 回升更明顯，但臨床緩解率未能顯著優於安慰劑 (56.9% vs. 45.8%, p=0.22)。" },
+      { title: "REGENCY Trial", year: 2025, displayYear: "2025", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Efficacy and Safety of Obinutuzumab in Active Lupus Nephritis", subCategory: "LN (狼瘡性腎炎)", summary: "評估新型第二型抗 CD20 單株抗體 (Obinutuzumab) 附加於標準治療 (MMF + 類固醇) 治療活動性狼瘡性腎炎的第三期臨床試驗。", outcome: "Primary Outcome：在第 76 週時，使用 Obinutuzumab (1g IV) 組別達成完全腎臟緩解 (CRR，含 UPCR <0.5 且 eGFR 穩定) 的比例達 46.4%，顯著高於安慰劑組的 33.1% (p=0.02)。" },
+      { title: "RAVE", year: 2010, displayYear: "2010", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Rituximab versus Cyclophosphamide for ANCA-Associated Vasculitis", subCategory: "ANCA 血管炎", summary: "證實 Rituximab 在 ANCA 血管炎誘導緩解上，療效不劣於傳統的 Cyclophosphamide。", outcome: "Primary Outcome：第 6 個月時的無類固醇完全緩解率。Rituximab 組 (375 mg/m² x 4週) 達 64%，不劣於口服 CYC (2 mg/kg/d) 組的 53% (p<0.001 for non-inferiority)，且在復發型病患中展現優越性。" },
+      { title: "MEPEX", year: 2007, displayYear: "2007", journal: "Journal of the American Society of Nephrology", design: "RCT", articleTitle: "Plasma Exchange or High-Dosage Methylprednisolone as Adjunct Therapy for Severe Renal Vasculitis", subCategory: "ANCA 血管炎", summary: "早期認為血漿置換可改善嚴重 ANCA 血管炎的短期腎臟存活率。", outcome: "Primary Outcome：針對 Scr >5.8 或洗腎的嚴重病患。血漿置換組 (14天內7次 PLEX) 在 12 個月時脫離透析存活的比例為 69%，顯著高於純 IV Methylprednisolone 脈衝組的 49% (p=0.02)。" },
+      { title: "PEXIVAS", year: 2020, displayYear: "2020", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Plasma Exchange and Glucocorticoids in Severe ANCA-Associated Vasculitis", subCategory: "ANCA 血管炎", summary: "最大型的 ANCA 試驗，推翻 MEPEX，證實血漿置換無法降低 ESKD 或死亡風險，並推動低劑量類固醇策略。", outcome: "Primary Outcome：ESKD 或全因死亡複合終點。血漿置換並未降低此風險 (HR 0.86, p=0.27)。此外，減量類固醇策略 (Reduced-dose) 對比標準高劑量 (Standard-dose)，在保護療效上達非劣效性，且嚴重感染事件更少。" },
+      { title: "ADVOCATE", year: 2021, displayYear: "2021", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Avacopan for the Treatment of ANCA-Associated Vasculitis", subCategory: "ANCA 血管炎", summary: "證實 Avacopan (C5a 受體抑制劑) 能取代高劑量類固醇治療 ANCA 血管炎，減少副作用。", outcome: "Primary Outcome：第 52 週的持續緩解率。Avacopan (30mg BID) 組高達 65.7%，優於標準 Prednisone 漸減組的 54.9% (p=0.007 for superiority)；且 Avacopan 顯著降低了類固醇相關毒性副作用 (GTI 分數顯著較低)。" },
+      { title: "MAINRITSAN", year: 2014, displayYear: "2014", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Rituximab versus Azathioprine for Maintenance in ANCA-Associated Vasculitis", subCategory: "ANCA 血管炎", summary: "確立 Rituximab 在 ANCA 血管炎維持期預防復發優於 Azathioprine。", outcome: "Primary Outcome：誘導緩解後第 28 個月的主要復發率。維持期使用 Rituximab (固定劑量 500mg 於 d0, d14, 以及第6, 12, 18個月) 的復發率僅 5%，顯著低於 Azathioprine (2 mg/kg/d) 組的 29% (p<0.001)。" }
+    ]
+  },
+  {
+    id: 9,
+    title: "9. 腎性貧血與骨病變",
+    subtitle: "(Anemia & CKD-MBD)",
+    description: "EPO 時代的省思與新型口服藥物的崛起。",
+    icon: <Syringe className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "CHOIR", year: 2006, displayYear: "2006", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Correction of Anemia with Epoetin Alfa in Chronic Kidney Disease", subCategory: "腎性貧血 (Renal Anemia)", summary: "證實將 CKD 患者血紅素目標設定過高 (13.5 g/dL) 會增加心血管風險。", outcome: "Primary Outcome：主要 CV 複合終點 (死亡、MI、CHF)。將 Hb 目標設定為 13.5 g/dL 的高標組發生風險達 17.5%，顯著高於目標 11.3 g/dL 組別的 13.5% (HR 1.34, p=0.03)。確立 CKD 貧血 Hb 目標不宜超過 11.5-12.0。" },
+      { title: "TREAT", year: 2009, displayYear: "2009", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "A Trial of Darbepoetin Alfa in Type 2 Diabetes and Chronic Kidney Disease", subCategory: "腎性貧血 (Renal Anemia)", summary: "發現 Darbepoetin alfa 治療糖尿病 CKD 貧血雖可減少輸血，但會增加中風風險。", outcome: "Primary Outcome：Darbepoetin 將目標 Hb 設為 13 g/dL，與安慰劑(僅在 Hb<9 才救援)相比，未能降低主要 CV 或腎臟事件 (HR 1.05, p=0.41)，反而使致命/非致命中風風險增加近兩倍 (HR 1.92, p<0.001)。" },
+      { title: "ASCEND-ND", year: 2021, displayYear: "2021", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Daprodustat for the Treatment of Anemia in Patients Not Undergoing Dialysis", subCategory: "腎性貧血 (Renal Anemia)", summary: "證實新型口服 HIF-PHI (Daprodustat) 在非透析 CKD 貧血患者的療效與安全性。", outcome: "Primary Outcome：首要療效 (Hb 改變量) 與首要安全終點 (MACE-3 首次發生時間)。Daprodustat 在未透析 CKD 患者中，矯正血紅素的效果與 CV 安全性均證實「非劣效於 (Non-inferior)」傳統針劑 Darbepoetin alfa (MACE HR 1.03)。" },
+      { title: "ASCEND-D", year: 2021, displayYear: "2021", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Daprodustat for the Treatment of Anemia in Patients Undergoing Dialysis", subCategory: "腎性貧血 (Renal Anemia)", summary: "證實 Daprodustat 在透析患者中改善貧血不劣於傳統 ESA 針劑。", outcome: "Primary Outcome：在接受透析的 CKD 患者中，口服 Daprodustat 維持血紅素達標的能力不劣於傳統 ESA (Hb 改變平均差 -0.18 g/dL)，且未顯著增加主要心血管事件 (MACE) 的風險 (HR 0.93, 95% CI 0.81-1.07)。" },
+      { title: "PIVOTAL", year: 2019, displayYear: "2019", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Proactive versus Reactive Intravenous Iron in Patients on Hemodialysis", subCategory: "腎性貧血 (Renal Anemia)", summary: "證實血液透析患者採用「積極靜脈鐵劑注射」策略能降低心血管事件與 ESA 劑量。", outcome: "Primary Outcome：積極靜脈鐵劑組 (每月固定給 400mg，Ferritin 上限 700 ng/ml) 較被動救援組 (Ferritin <200 才給鐵)，顯著降低了主要 CV 複合終點達 15% (HR 0.85, p=0.04 for superiority)，且總 ESA 劑量中位數顯著減少了 19.4%。" },
+      { title: "EVOLVE", year: 2012, displayYear: "2012", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Effect of Cinacalcet on Cardiovascular Disease in Patients Undergoing Dialysis", subCategory: "骨病變與礦物質代謝 (CKD-MBD)", summary: "評估 Cinacalcet (擬鈣劑) 對透析次發性副甲狀腺亢進患者硬端點影響的最大型試驗。", outcome: "Primary Outcome：包含全因死亡、心肌梗塞、不穩定心絞痛、心衰竭與周邊血管事件的複合終點。Cinacalcet 30-180mg 組在意向分析 (ITT) 未達顯著差異 (HR 0.93, p=0.11)；但校正年齡差異後顯示具備顯著 CV 保護潛力 (HR 0.88, p=0.008)。" },
+      { title: "DCOR", year: 2007, displayYear: "2007", journal: "Kidney International", design: "RCT", articleTitle: "Mortality risk for patients receiving hemodialysis treated with sevelamer hydrochloride or calcium-based phosphate binders", subCategory: "骨病變與礦物質代謝 (CKD-MBD)", summary: "比較 Sevelamer (非鈣磷結合劑) 與鈣片在降低透析患者死亡率上的差異。", outcome: "Primary Outcome：全因死亡率。整體透析患者中使用 Sevelamer 在全因死亡率上與鈣片組無顯著差異 (HR 0.91, p=0.30)；但在事先定義的 >65 歲老年次族群分析中，Sevelamer 表現出顯著較好的存活益處 (HR 0.77, p=0.02)。" }
+    ]
+  },
+  {
+    id: 10,
+    title: "10. 急性腎損傷與透析時機",
+    subtitle: "(AKI & RRT)",
+    description: "加護病房中充滿爭議的體液與透析時機實證。",
+    icon: <Activity className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "ATN Study", year: 2008, displayYear: "2008", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Intensity of Renal Support in Critically Ill Patients with Acute Kidney Injury", summary: "證實對於重症 AKI 患者，強化透析劑量並無法降低死亡率。", outcome: "Primary Outcome：60 天全因死亡率。標準透析組 (每週 3 次 IHD，或 CRRT 20 ml/kg/h) 為 51.5%；強化透析組 (每週 6 次 IHD，或 CRRT 35 ml/kg/h) 為 53.6%。兩者無顯著差異，確立 CRRT 20-25 ml/kg/h 的黃金標準劑量。" },
+      { title: "RENAL Study", year: 2009, displayYear: "2009", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Intensity of Continuous Renal-Replacement Therapy in Critically Ill Patients", summary: "紐澳大型試驗，同樣證實提高 CVVH 劑量對重症 AKI 預後無額外幫助。", outcome: "Primary Outcome：90 天全因死亡率。高劑量 CVVH (40 ml/kg/h) 與標準劑量 (25 ml/kg/h) 相比，死亡率完全相同 (皆為 44.7%，OR 1.00, p=0.99)。但高劑量組發生低磷血症比例顯著增加 (65% vs 54%)。" },
+      { title: "AKIKI", year: 2016, displayYear: "2016", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Artificial Kidney Initiation in Kidney Injury (AKIKI): Delayed versus early renal replacement therapy", summary: "針對重症 AKI 患者，發現「延遲透析策略」與「早期透析」的存活率無異，且可減少透析需求。", outcome: "Primary Outcome：60 天全因死亡率。早期透析 (KDIGO 3期 6h內) 與延遲透析 (直到血鉀>6、pH<7.15、肺水腫或尿毒症狀出現) 無顯著差異 (48.5% vs 49.7%, p=0.79)。且延遲組有高達 49% 患者免除了洗腎需求。" },
+      { title: "IDEAL-ICU", year: 2018, displayYear: "2018", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Timing of Renal-Replacement Therapy in Patients with Severe Sepsis and Acute Kidney Injury", summary: "針對敗血性休克併發 AKI 患者，提早透析未能改善死亡率。", outcome: "Primary Outcome：90 天全因死亡率。在嚴重敗血症合併 RIFLE-F 級 AKI 患者中，早期透析 (確診內 12h) 死亡率為 58%，延遲透析 (觀察 48h 或緊急適應症) 為 54% (p=0.38)。因無顯著效益且收案緩慢，試驗提前終止。" },
+      { title: "ELAIN", year: 2016, displayYear: "2016", journal: "JAMA", design: "RCT", articleTitle: "Effect of Early vs Delayed Initiation of Renal Replacement Therapy on Mortality in Critically Ill Patients With Acute Kidney Injury", summary: "唯一顯示早期透析可能改善單中心術後 AKI 死亡率的試驗（結果與其他多中心試驗相左）。", outcome: "Primary Outcome：90 天全因死亡率。早期組 (KDIGO 2期 8h內) 死亡率為 39.3%，顯著低於延遲組 (KDIGO 3期 12h內或絕對適應症) 的 54.7% (p=0.03)。(註：為單中心、高比例術後患者，結果外部效度受限)。" },
+      { title: "STARRT-AKI", year: 2020, displayYear: "2020", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Timing of Initiation of Renal-Replacement Therapy in Acute Kidney Injury", summary: "全球最大型 AKI 透析時機試驗，拍板定案：加速啟動 RRT 不會降低 90 天死亡率。", outcome: "Primary Outcome：90 天全因死亡率。加速策略 (符合 KDIGO 2/3期內 12h啟動) 為 43.9%；標準策略 (依臨床醫師判斷或絕對適應症) 為 43.7% (RR 1.00, p=0.92)。且加速組 90 天後仍依賴透析的風險略高 (10.4% vs 6.0%)。" },
+      { title: "PICARD", year: 2005, displayYear: "2005", journal: "Kidney International", design: "Cohort Study", articleTitle: "Spectrum of acute renal failure in the intensive care unit: The PICARD experience", summary: "提供醫院內 AKI 流行病學與自然病史的重要觀察性世代研究。", outcome: "Primary Outcome：多中心世代觀察 (N=618)。發現重症 AKI 病患整體死亡率極高，未洗腎者 37%，接受 RRT 者高達 52%。且存活者有極高比例發展為 CKD，確立 AKI 為獨立的不良預後預測因子。" },
+      { title: "ProCESS", year: 2014, displayYear: "2014", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "A Randomized Trial of Protocol-Based Care for Early Septic Shock", summary: "挑戰傳統早期目標導向治療 (EGDT) 在敗血症 AKI 預防中的絕對必要性。", outcome: "Primary Outcome：60 天院內死亡率。需要放置 CVC 並嚴格監測 ScvO2 >70%、CVP 8-12 的傳統 EGDT 組 (21.0%)，並未優於常規以血壓/乳酸導向的標準處置 (18.9%)，p=0.83。改變了敗血症早期輸液的指引。" },
+      { title: "SMART Trial", year: 2018, displayYear: "2018", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Balanced Crystalloids versus Saline in Critically Ill Adults", summary: "證實使用平衡輸液 (Balanced Crystalloids) 較生理食鹽水更能減少 ICU 患者的重大腎臟不良事件 (MAKE30)。", outcome: "Primary Outcome：MAKE30 (30天內發生死亡、新依賴透析、或 Scr 持續上升≥2倍)。平衡輸液組 (Lactated Ringer / Plasma-Lyte A) 發生率為 14.3%，顯著低於 0.9% Normal Saline 組的 15.4% (OR 0.91, p=0.04)。" },
+      { title: "SALT-ED", year: 2018, displayYear: "2018", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Balanced Crystalloids versus Saline in Noncritically Ill Adults", summary: "在非 ICU 的急診患者中，平衡輸液同樣能減少腎臟相關併發症風險。", outcome: "Primary Outcome：急診患者使用平衡輸液雖未減少整體住院天數 (Median 2天)，但次要終點 MAKE30 發生率為 4.7%，顯著低於 0.9% NS 組的 5.6% (OR 0.82, p=0.01)，顯示在急診早期亦應避免大量 Normal Saline。" }
+    ]
+  },
+  {
+    id: 11,
+    title: "11. 透析適足性與併發症",
+    subtitle: "(Dialysis & Modalities)",
+    description: "血液透析與腹膜透析臨床實務的標準建立。",
+    icon: <Droplets className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "HEMO Study", year: 2002, displayYear: "2002", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Effect of Dialysis Dose and Membrane Flux in Maintenance Hemodialysis", summary: "證實提高標準血液透析劑量 (Kt/V) 或使用高通量 (High-flux) 人工腎臟無法顯著降低總死亡率。", outcome: "Primary Outcome：全因死亡率。高劑量組 (目標 eKt/V 1.45) vs 標準劑量組 (目標 1.05)，RR 0.96 (p=0.53)；高通量膜 (β2-M 清除率 >20 ml/min) vs 低通量膜，RR 0.92 (p=0.23)。兩者皆無顯著改善存活率。" },
+      { title: "ADEMEX", year: 2002, displayYear: "2002", journal: "Journal of the American Society of Nephrology", design: "RCT", articleTitle: "Effect of increased pKt/V on survival of CAPD patients: the ADEMEX trial", summary: "證實增加腹膜透析 (CAPD) 的小分子清除率未能改善存活率。", outcome: "Primary Outcome：全因死亡率。將腹膜透析的 CrCl 目標提高至 >60 L/wk/1.73m² (實際達成 57L)，與對照組 (約 46L) 相比，患者存活率並無顯著差異 (RR 1.00, p=0.96)，確立 PD 適足性不應僅追求 Kt/V 數字。" },
+      { title: "IDEAL Trial", year: 2010, displayYear: "2010", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "A Randomized, Controlled Trial of Early versus Late Initiation of Dialysis", summary: "證實 eGFR 10-14 時「早期洗腎」不會比 eGFR 5-7「晚期洗腎」帶來更好的存活率。", outcome: "Primary Outcome：全因死亡率。早期啟動組 (eGFR 10-14 ml/min) 與晚期啟動組 (eGFR 5-7 ml/min) 死亡率無異 (HR 1.04, p=0.75)；值得注意的是，高達 76% 的晚期組病患最終因尿毒症狀而在 eGFR >7 之前便提早啟動透析。" },
+      { title: "FHN Trial", year: 2010, displayYear: "2010", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "In-Center Hemodialysis Six Times per Week versus Three Times per Week", summary: "證實每週六次的頻繁血液透析能改善左心室質量與生活品質，但需承擔血管通路風險。", outcome: "Primary Outcome：每週 6 次 HD 相較於傳統 3 次，顯著降低左心室質量並改善生活品質自評分數 (HR 0.61 for death/CV/LV mass複合終點, p=0.002)；但動靜脈瘻管相關介入次數顯著增加 (HR 1.71, p=0.02)。" },
+      { title: "MPO Study", year: 2009, displayYear: "2009", journal: "Journal of the American Society of Nephrology", design: "RCT", articleTitle: "Effect of Membrane Permeability on Survival of Hemodialysis Patients", summary: "顯示 High-flux 透析膜在血清白蛋白較低的糖尿病 HD 患者中可提升存活率。", outcome: "Primary Outcome：整體全因死亡率在 High-flux 與 Low-flux 膜之間無顯著差異 (p=0.23)；但事前定義的次族群分析顯示，在血清白蛋白 ≤4 g/dL 或合併糖尿病的患者中，使用 High-flux 膜可顯著提高存活率 (p=0.032)。" },
+      { title: "DOPPS", year: 1996, displayYear: "始於 1996", journal: "Kidney International", design: "Cohort Study", articleTitle: "The Dialysis Outcomes and Practice Patterns Study (DOPPS): design, data elements, and methodology", summary: "最重要的全球透析前瞻性觀察研究，揭示血管通路、透析時間等多項臨床指引的流行病學基礎。", outcome: "Primary Outcome：透過多國萬人世代分析，強力證實 AV Fistula 相較於 CVC (雙腔靜脈導管) 具有更低的死亡與感染風險 (Mortality RR 0.68)；並發現每次透析時間 <4 小時與較高的死亡率顯著相關。" },
+      { title: "CANUSA", year: 1996, displayYear: "1996", journal: "Journal of the American Society of Nephrology", design: "Cohort Study", articleTitle: "Adequacy of dialysis and nutrition in continuous peritoneal dialysis: association with clinical outcomes", summary: "早期腹膜透析經典研究，確立殘餘腎功能 (RRF) 對 PD 患者存活率的決定性影響。", outcome: "Primary Outcome：最初發現總 CrCl 每多 5 L/wk/1.73m²，PD 患者死亡風險就下降 12%。但後續重新分析證實，存活益處「完全來自於患者自身的殘餘腎功能 (RRF)」，而非腹膜透析清除的溶質總量，徹底翻轉 PD 觀念。" },
+      { title: "AURORA", year: 2009, displayYear: "2009", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Rosuvastatin and Cardiovascular Events in Patients Undergoing Hemodialysis", summary: "證實 Rosuvastatin 無法降低常規血液透析患者的心血管事件與總死亡率。", outcome: "Primary Outcome：主要心血管複合終點 (非致命心肌梗塞、中風或心血管死亡)。Rosuvastatin 10mg 儘管有效降低透析患者 LDL 達 43%，但複合終點發生率 (39.6% vs 40.8%) 與安慰劑相比毫無顯著差異 (HR 0.96, p=0.59)。" },
+      { title: "CONTRAST", year: 2012, displayYear: "2012", journal: "Journal of the American Society of Nephrology", design: "RCT", articleTitle: "Effect of Online Hemodiafiltration on All-Cause Mortality and Cardiovascular Events", summary: "探討線上血液透析過濾術 (HDF) 與標準 HD 的預後差異。", outcome: "Primary Outcome：全因死亡率。線上 HDF 與標準 HD (Low-flux) 相比，全因死亡率無顯著差異 (HR 0.95, p=0.50)。但事後次分析提示，若高對流體積 (Convection volume) 達 >21.9 L/session 可能具備存活益處 (HR 0.61)。" },
+      { title: "CHOICE Study", year: 1999, displayYear: "1999", journal: "JAMA", design: "Cohort Study", articleTitle: "The choices for healthy outcomes in caring for end-stage renal disease (CHOICE) study", summary: "評估血液透析與腹膜透析患者生活品質與預後差異的經典世代研究。", outcome: "Primary Outcome：前瞻性觀察 1041 名新進入透析 (Incident ESRD) 患者。發現 PD 患者在開始透析的第一年存活率優於或等於 HD，但隨後 (1-2年後) 兩者的死亡風險逐漸趨近，且 HD 在血清白蛋白與營養指標上表現較佳。" },
+      { title: "KALM-1", year: 2020, displayYear: "2020", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Difelikefalin in Hemodialysis Patients with Pruritus", subCategory: "透析併發症 (Dialysis Complications)", summary: "證實新型 Kappa 鴉片類受體促效劑 (Difelikefalin) 能顯著改善血液透析患者難治的尿毒症搔癢 (UP)。", outcome: "Primary Outcome：第 12 週時，最差搔癢程度數值評定量表 (WI-NRS) 分數下降 ≥3 分的比例。靜脈注射 Difelikefalin 組達 51.0%，顯著高於安慰劑組的 27.6% (p<0.001)，大幅改善患者生活品質。" }
+    ]
+  },
+  {
+    id: 12,
+    title: "12. 腎臟移植與免疫抑制",
+    subtitle: "(Kidney Transplantation)",
+    description: "奠定當代腎臟移植存活率的免疫抑制核心試驗。",
+    icon: <Heart className="w-6 h-6 text-red-800 dark:text-red-500" />,
+    papers: [
+      { title: "SYMPHONY Trial", year: 2007, displayYear: "2007", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Comparison of Regimens Containing Tacrolimus, Mycophenolate Mofetil, or Sirolimus with Cyclosporine-Based Therapy", summary: "確立現今腎臟移植標準免疫抑制療程 (低劑量 Tacrolimus + MMF + Steroid) 的核心試驗 (全名即為 ELITE-Symphony)。", outcome: "Primary Outcome：第 12 個月時的估算腎絲球過濾率 (eGFR)。低劑量 Tacrolimus + MMF 組的平均 eGFR 達 65.4 ml/min，顯著優於標準 CsA 組、低劑量 CsA 組與 Sirolimus 組；且切片證實的急性排斥率亦為四組最低 (12.3%)。" },
+      { title: "SYMPHONY 3-Year Follow-up", year: 2009, displayYear: "2009", journal: "American Journal of Transplantation", design: "Cohort Study", articleTitle: "Calcineurin inhibitor minimization in the Symphony study: observational results 3 years after transplantation", summary: "SYMPHONY 試驗的三年長期觀察報告，評估不同免疫抑制策略在腎臟移植後的長期影響。", outcome: "Primary Outcome：移植後 3 年的腎功能與移植腎存活率。結果證實，低劑量 Tacrolimus 搭配 MMF 的組別，依然維持最佳的平均 eGFR (約 63 ml/min)，且整體臨床預後仍優於其他治療策略組合。" },
+      { title: "BENEFIT", year: 2010, displayYear: "2010/2016", journal: "The New England Journal of Medicine", design: "RCT", articleTitle: "Belatacept and Long-Term Outcomes in Kidney Transplantation", summary: "證實 Belatacept (T 細胞共刺激阻斷劑) 在腎臟移植中能比 Cyclosporine 提供更好的長期腎功能保護。", outcome: "Primary Outcome：存活率、腎功能 (GFR) 及急性排斥率。Belatacept 治療組在初期(第1年)急性排斥率較高，但在 7 年長期追蹤中，患者存活率極高且平均 eGFR 達 ~70 ml/min，顯著優於 Cyclosporine 組的 45 ml/min。" }
+    ]
+  }
+];
+
+// --- Gemini API 呼叫函數 (Exponential Backoff 錯誤重試機制) ---
+const apiKey = ""; // 執行環境會自動提供 API Key
+
+const callGeminiAPI = async (prompt, retries = 5) => {
+  const delays = [1000, 2000, 4000, 8000, 16000];
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          systemInstruction: { 
+            parts: [{ 
+              text: "你是專業且資深的腎臟科主治醫師 (Nephrologist)，專門負責向專業醫護人員進行臨床解析與經驗分享。請以繁體中文回答，口吻專業、客觀、簡潔且具啟發性。請絕對不要使用「學弟妹」等稱呼，請以專業同儕的語氣來進行解說。" 
+            }] 
+          }
+        })
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || "抱歉，目前無法生成解析。";
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      await new Promise(resolve => setTimeout(resolve, delays[i]));
+    }
+  }
+};
+
+// --- 獨立的時間軸項目元件 (NEJM Style + Functions + AI) ---
+const TimelineItem = ({ paper, index }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [isShared, setIsShared] = useState(false);
+  
+  // AI 解析相關 State
+  const [aiInsight, setAiInsight] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiError, setAiError] = useState(false);
+
+  // 構造 PubMed 搜尋連結
+  const pubMedUrl = `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(paper.articleTitle || paper.title)}`;
+
+  // 一鍵複製引文功能 (使用 iframe 相容的方法)
+  const handleCopyCitation = (e) => {
+    e.stopPropagation(); // 避免觸發折疊
+    const citationText = `${paper.articleTitle || paper.title} (${paper.journal || ''}, ${paper.year}).\n[Outcome] ${paper.outcome || paper.summary}`;
+    
+    const textArea = document.createElement("textarea");
+    textArea.value = citationText;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('複製失敗', err);
+    }
+    document.body.removeChild(textArea);
+  };
+
+  // 快速分享功能 (Line / WhatsApp 等)
+  const handleShare = async (e) => {
+    e.stopPropagation();
+    const shareText = `📜 [腎臟科 Landmark] ${paper.articleTitle || paper.title} (${paper.year})\n📍 Primary Outcome: ${paper.outcome || paper.summary}\n🔗 查看完整解析: ${window.location.href}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${paper.title} - 腎臟科 Landmark`,
+          text: shareText,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('Share cancelled', err);
+      }
+    } else {
+      // Fallback: 複製到剪貼簿 (供桌面版或不支援 Web Share API 的環境使用)
+      const textArea = document.createElement("textarea");
+      textArea.value = shareText;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setIsShared(true);
+        setTimeout(() => setIsShared(false), 2000);
+      } catch (err) {
+        console.error('複製失敗', err);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  // 呼叫 Gemini AI 分析文獻
+  const handleAIAnalysis = async (e) => {
+    e.stopPropagation();
+    if (aiInsight) return; // 若已經有結果則不重複呼叫
+    
+    setIsAnalyzing(true);
+    setAiError(false);
+    
+    const prompt = `針對這篇腎臟科指標性文獻：\n【標題】：${paper.articleTitle || paper.title} (${paper.year})\n【摘要】：${paper.summary}\n【主要結果】：${paper.outcome}\n\n請為臨床醫師提供一個簡短、條理分明的「臨床應用重點 (Clinical Pearl)」，說明這篇文獻在現代腎臟病學中的臨床價值，以及它如何改變了臨床 Guideline 或開藥習慣。\n\n要求：\n1. 請不要使用複雜的 Markdown 語法，直接使用純文字並搭配 Emoji 分段即可。\n2. 請分為「🎯 核心貢獻」與「👨‍⚕️ 臨床應用場景」兩段說明。\n3. 每段之間用換行隔開，保持精簡。`;
+
+    try {
+      const result = await callGeminiAPI(prompt);
+      setAiInsight(result);
+    } catch (err) {
+      setAiError(true);
+      console.error("AI 分析發生錯誤:", err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  return (
+    <div className="relative pl-8 sm:pl-32 py-4 group">
+      {/* 桌面版年份顯示在左側 */}
+      <div className="hidden sm:flex flex-col items-end absolute left-0 top-6 w-24 text-right">
+        <span className="text-sm font-mono font-bold text-white bg-slate-900 dark:bg-slate-700 px-3 py-1 rounded shadow-sm">{paper.displayYear}</span>
+      </div>
+      
+      {/* 垂直線 */}
+      <div className="absolute left-[15px] sm:left-[111px] top-0 bottom-0 w-[2px] bg-slate-200 dark:bg-slate-700"></div>
+      
+      {/* 時間軸節點 (圓點) */}
+      <div 
+        className={`absolute left-[7px] sm:left-[103px] top-6 w-4 h-4 rounded-full border-2 transition-all duration-300 ${isOpen ? 'border-red-800 bg-red-800 dark:border-red-500 dark:bg-red-500 shadow-[0_0_8px_rgba(153,27,27,0.6)]' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 group-hover:border-red-600 dark:group-hover:border-red-400'}`}
+      ></div>
+
+      {/* 內容卡片 */}
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className={`bg-white dark:bg-slate-800 border rounded-sm p-4 sm:p-5 cursor-pointer transition-all duration-300 hover:shadow-lg border-l-4 ${isOpen ? 'border-l-red-800 dark:border-l-red-500 border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700 shadow-md' : 'border-transparent border-t-slate-200 dark:border-t-slate-700 border-r-slate-200 dark:border-r-slate-700 border-b-slate-200 dark:border-b-slate-700 shadow-sm'}`}
+      >
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            {/* 手機版年份 & Study Design Tags */}
+            <div className="flex flex-wrap gap-2 mb-2 items-center">
+              <span className="sm:hidden inline-block text-xs font-mono font-bold text-white bg-slate-900 dark:bg-slate-700 px-2 py-1 rounded">{paper.displayYear}</span>
+              {paper.design && (
+                <span className="inline-flex items-center text-[11px] font-sans font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded border border-slate-200 dark:border-slate-600 uppercase tracking-wider">
+                  <Tag className="w-3 h-3 mr-1 opacity-70" /> {paper.design}
+                </span>
+              )}
+            </div>
+            <h3 className="text-xl font-serif font-bold text-slate-900 dark:text-white pr-4 leading-tight">{paper.title}</h3>
+          </div>
+          <button className={`mt-1 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform duration-300 ${isOpen ? 'rotate-180 text-red-800 dark:text-red-500' : ''}`}>
+            <ChevronDown className="w-5 h-5" />
+          </button>
+        </div>
+        
+        {/* 展開的摘要、Outcome 與功能按鈕區 */}
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[2000px] mt-5 opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-700 space-y-4">
+            
+            {/* 期刊名稱與論文全名 (Citation Header) */}
+            {(paper.journal || paper.articleTitle) && (
+              <div className="mb-2">
+                {paper.journal && (
+                  <div className="flex items-center text-red-800/90 dark:text-red-300 font-serif italic mb-2 inline-flex px-3 py-1.5 rounded-sm bg-red-50/50 dark:bg-red-900/30 border border-red-100/50 dark:border-red-800/50">
+                    <BookOpen className="w-4 h-4 mr-2 opacity-80 flex-shrink-0" />
+                    <span className="font-semibold text-[15px]">{paper.journal}</span>
+                  </div>
+                )}
+                {paper.articleTitle && (
+                  <h4 className="font-serif text-slate-800 dark:text-slate-200 font-bold text-[17px] leading-relaxed">
+                    {paper.articleTitle}
+                  </h4>
+                )}
+              </div>
+            )}
+
+            {/* 摘要 */}
+            <div className="border-l-4 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 p-4">
+              <span className="font-bold text-slate-800 dark:text-slate-300 block mb-1 text-sm tracking-wide uppercase">Abstract & Background</span>
+              <p className="font-serif text-slate-700 dark:text-slate-300 leading-relaxed text-[15px]">
+                {paper.summary}
+              </p>
+            </div>
+            
+            {/* Outcome */}
+            {paper.outcome && (
+              <div className="border-l-4 border-red-800 dark:border-red-600 bg-red-50/40 dark:bg-red-900/10 p-4">
+                <span className="font-bold text-red-900 dark:text-red-400 flex items-center mb-1 text-sm tracking-wide uppercase">
+                  <CheckCircle className="w-4 h-4 mr-1.5 text-red-800 dark:text-red-500" /> Primary Outcome
+                </span>
+                <p className="font-serif text-slate-900 dark:text-slate-200 leading-relaxed text-[15px]">
+                  {paper.outcome}
+                </p>
+              </div>
+            )}
+
+            {/* AI 解析結果區塊 */}
+            {aiInsight && (
+              <div className="border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/50 dark:bg-indigo-900/20 p-5 rounded-md shadow-inner mt-4 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 dark:bg-indigo-400"></div>
+                <span className="font-bold text-indigo-800 dark:text-indigo-300 flex items-center mb-3 text-sm tracking-wide">
+                  <Sparkles className="w-4 h-4 mr-2 text-indigo-600 dark:text-indigo-400" /> AI 臨床導師解析 (Clinical Pearl)
+                </span>
+                <div className="font-sans text-slate-800 dark:text-slate-200 leading-relaxed text-[15px] space-y-3">
+                  {aiInsight.split('\n').map((line, idx) => (
+                    <p key={idx}>{line}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI 錯誤提示 */}
+            {aiError && (
+              <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded">
+                連線逾時，無法取得 AI 解析，請稍後再試。
+              </div>
+            )}
+
+            {/* 功能按鈕列 (PubMed, 複製引文, AI 解析) */}
+            <div className="flex flex-wrap gap-3 pt-3">
+              <a 
+                href={pubMedUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()} // 避免摺疊
+                className="inline-flex items-center text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-slate-600 dark:hover:text-blue-300 px-3 py-2 rounded transition-colors border border-slate-200 dark:border-slate-600"
+              >
+                <ExternalLink className="w-4 h-4 mr-1.5" />
+                ↗ PubMed 搜尋
+              </a>
+              <button 
+                onClick={handleCopyCitation}
+                className="inline-flex items-center text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 px-3 py-2 rounded transition-colors border border-slate-200 dark:border-slate-600"
+              >
+                {isCopied ? (
+                  <><Check className="w-4 h-4 mr-1.5 text-green-600 dark:text-green-400" /> 已複製引文!</>
+                ) : (
+                  <><Copy className="w-4 h-4 mr-1.5" /> 📋 複製引文</>
+                )}
+              </button>
+              
+              {/* 手機快傳/分享按鈕 */}
+              <button 
+                onClick={handleShare}
+                className="inline-flex items-center text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-green-50 hover:text-green-700 dark:hover:bg-slate-600 dark:hover:text-green-400 px-3 py-2 rounded transition-colors border border-slate-200 dark:border-slate-600"
+              >
+                {isShared ? (
+                  <><Check className="w-4 h-4 mr-1.5 text-green-600 dark:text-green-400" /> 已複製分享內容!</>
+                ) : (
+                  <><Share2 className="w-4 h-4 mr-1.5" /> 分享/傳送</>
+                )}
+              </button>
+
+              {/* ✨ AI 深度解析按鈕 */}
+              {!aiInsight && (
+                <button 
+                  onClick={handleAIAnalysis}
+                  disabled={isAnalyzing}
+                  className={`inline-flex items-center text-sm font-medium px-4 py-2 rounded transition-all border ${
+                    isAnalyzing 
+                      ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-400 border-indigo-200 dark:border-indigo-800 cursor-not-allowed' 
+                      : 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700/50 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500'
+                  }`}
+                >
+                  {isAnalyzing ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> AI 分析中...</>
+                  ) : (
+                    <><Sparkles className="w-4 h-4 mr-2 text-indigo-600 dark:text-indigo-400" /> ✨ AI 深度解析</>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- 子分類折疊群組元件 ---
+const SubCategoryGroup = ({ groupName, papers }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const sortedPapers = [...papers].sort((a, b) => a.year - b.year);
+
+  return (
+    <div className="mb-6 bg-white dark:bg-slate-800 rounded-md shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex justify-between items-center p-4 sm:p-5 bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors border-b border-transparent data-[open=true]:border-slate-200 dark:data-[open=true]:border-slate-700"
+        data-open={isOpen}
+      >
+        <h3 className="text-lg font-serif font-bold text-slate-800 dark:text-white flex items-center">
+          <Shield className="w-5 h-5 mr-3 text-red-800 dark:text-red-500 opacity-80" />
+          {groupName}
+          <span className="ml-3 text-xs font-sans font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+            {papers.length} Trials
+          </span>
+        </h3>
+        <ChevronDown className={`w-5 h-5 flex-shrink-0 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="p-2 sm:p-6 pt-2 bg-white dark:bg-slate-800">
+          {sortedPapers.map((paper, index) => (
+            <TimelineItem key={index} paper={paper} index={index} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- 主應用程式元件 ---
+export default function App() {
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // 🌙 Dark Mode State
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  // 📲 QR Code Modal State
+  const [showQRModal, setShowQRModal] = useState(false);
+
+  // 攤平所有論文以供全局搜尋
+  const allPapers = nephrologyData.flatMap(cat => 
+    cat.papers.map(paper => ({ ...paper, categoryName: cat.title }))
+  );
+
+  // 過濾搜尋結果
+  const searchResults = searchQuery.trim() === '' 
+    ? [] 
+    : allPapers.filter(paper => 
+        paper.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        paper.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        paper.displayYear.includes(searchQuery) ||
+        (paper.outcome && paper.outcome.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (paper.journal && paper.journal.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (paper.articleTitle && paper.articleTitle.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+
+  // 渲染內層頁面 (避免重複寫 dark mode wrapper)
+  const renderContent = () => {
+    // 當選擇分類時，進入時間軸視圖
+    if (selectedCategory) {
+      const hasSubCategories = selectedCategory.papers.some(p => p.subCategory);
+      const sortedPapers = [...selectedCategory.papers].sort((a, b) => a.year - b.year);
+
+      return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
+          {/* 頂部導航列 */}
+          <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm border-t-4 border-t-red-800 dark:border-t-red-600 transition-colors duration-300">
+            <div className="max-w-4xl mx-auto px-4 py-4 flex items-center">
+              <button 
+                onClick={() => setSelectedCategory(null)}
+                className="flex items-center text-slate-500 dark:text-slate-400 hover:text-red-800 dark:hover:text-red-400 transition-colors mr-4 bg-slate-50 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-slate-700 p-2 rounded-full"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="flex-1 truncate">
+                <h2 className="text-xl font-serif font-bold text-slate-900 dark:text-white truncate">{selectedCategory.title}</h2>
+                <p className="text-sm font-sans text-slate-500 dark:text-slate-400 truncate">{selectedCategory.subtitle}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 時間軸主要內容 */}
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            <div className="mb-8 bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-md shadow-sm border-t-4 border-red-800 dark:border-red-600 border-l border-r border-b border-slate-200 dark:border-slate-700 transition-colors duration-300">
+              <h1 className="text-2xl font-serif font-bold text-slate-900 dark:text-white mb-2">Category Timeline</h1>
+              <p className="text-slate-600 dark:text-slate-300 font-serif text-lg">{selectedCategory.description}</p>
+              <div className="mt-5 inline-flex items-center text-xs font-mono text-red-800 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded border border-red-100 dark:border-red-800/30">
+                <Clock className="w-3.5 h-3.5 mr-2" />
+                {hasSubCategories ? "CLICK CATEGORY TO EXPAND TRIALS" : "CLICK PAPER TO EXPAND ABSTRACT & OUTCOME"}
+              </div>
+            </div>
+
+            <div className="py-4">
+              {hasSubCategories ? (
+                Object.entries(
+                  selectedCategory.papers.reduce((acc, paper) => {
+                    const group = paper.subCategory || '其他';
+                    if (!acc[group]) acc[group] = [];
+                    acc[group].push(paper);
+                    return acc;
+                  }, {})
+                ).map(([groupName, papers]) => (
+                  <SubCategoryGroup key={groupName} groupName={groupName} papers={papers} />
+                ))
+              ) : (
+                sortedPapers.map((paper, index) => (
+                  <TimelineItem key={index} paper={paper} index={index} />
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- 首頁：分類列表視圖 ---
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 selection:bg-red-200 dark:selection:bg-red-900/50 selection:text-red-900 dark:selection:text-red-200 transition-colors duration-300">
+        
+        {/* 標題區 */}
+        <header className="bg-white dark:bg-slate-900 border-t-8 border-red-800 dark:border-red-700 shadow-sm pt-16 pb-20 px-4 mb-8 relative overflow-hidden transition-colors duration-300">
+          <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] dark:opacity-[0.05] pointer-events-none" 
+               style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '30px 30px' }}>
+          </div>
+          
+          <div className="max-w-5xl mx-auto text-center relative z-10">
+            <div className="inline-flex items-center space-x-3 mb-6">
+              <span className="w-12 h-[1px] bg-red-800/50 dark:bg-red-500/50"></span>
+              <span className="font-mono text-red-800 dark:text-red-500 tracking-[0.2em] text-xs font-bold uppercase flex items-center">
+                <Database className="w-3.5 h-3.5 mr-2" />
+                Database.v2026
+              </span>
+              <span className="w-12 h-[1px] bg-red-800/50 dark:bg-red-500/50"></span>
+            </div>
+            
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black mb-6 tracking-tight text-slate-900 dark:text-white flex flex-col items-center justify-center">
+              <span className="mb-2">腎臟科</span>
+              <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-red-900 via-red-700 to-red-500 dark:from-red-500 dark:via-red-400 dark:to-orange-500 drop-shadow-sm pb-1">
+                LANDMARK
+                <div className="absolute bottom-0 left-0 w-full h-1.5 bg-gradient-to-r from-red-900 via-red-700 to-red-500 dark:from-red-500 dark:to-orange-500 opacity-20 blur-sm"></div>
+              </span> 
+              <span className="mt-2">文獻</span>
+            </h1>
+            
+            <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-lg font-serif leading-relaxed mt-8 mb-8">
+              奠定現代腎臟病學基礎的 <strong className="text-red-800 dark:text-red-400 font-sans text-xl mx-1">{allPapers.length}</strong> 篇 Landmark 論文。<br className="hidden sm:block"/>
+              選擇下方主題，探索各領域的歷史演進與重要突破。
+            </p>
+
+            {/* QR Code 分享按鈕 */}
+            <button 
+              onClick={() => setShowQRModal(true)}
+              className="inline-flex items-center text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 px-6 py-3 rounded-sm shadow-md border border-slate-200 dark:border-slate-700 transition-all hover:border-red-800 dark:hover:border-red-500"
+            >
+              <QrCode className="w-5 h-5 mr-2 text-red-800 dark:text-red-500" />
+              📲 分享此資料庫
+            </button>
+          </div>
+        </header>
+
+        {/* 搜尋列 */}
+        <div className="max-w-3xl mx-auto px-4 -mt-16 mb-12 relative z-20">
+          <div className="bg-white dark:bg-slate-800 rounded-md shadow-lg p-2 flex items-center border border-slate-200 dark:border-slate-700 focus-within:ring-4 focus-within:ring-red-800/10 dark:focus-within:ring-red-500/20 focus-within:border-red-800 dark:focus-within:border-red-500 transition-all">
+            <Search className="w-6 h-6 text-red-800/70 dark:text-red-400/80 ml-4 flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="搜尋試驗名稱、論文全名、期刊名稱或年份..."
+              className="w-full p-3 sm:p-4 outline-none text-slate-800 dark:text-slate-100 bg-transparent text-base sm:text-lg font-medium placeholder-slate-400 dark:placeholder-slate-500 font-serif"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')} 
+                className="p-2 mr-2 text-slate-400 hover:text-red-800 dark:hover:text-red-400 bg-slate-50 dark:bg-slate-700 rounded-md transition-colors"
+                title="清除搜尋"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 主要內容區 */}
+        <main className="max-w-6xl mx-auto px-4 pb-24">
+          {searchQuery ? (
+            /* 搜尋結果列表 */
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-xl font-serif font-bold text-slate-800 dark:text-white mb-6 flex items-center border-b border-slate-200 dark:border-slate-800 pb-4">
+                <Search className="w-5 h-5 mr-3 text-red-800 dark:text-red-500" />
+                Search Results: {searchResults.length} papers found for "{searchQuery}"
+              </h2>
+              
+              {searchResults.length > 0 ? (
+                <div className="space-y-6">
+                  {searchResults.map((paper, idx) => (
+                    <div key={idx} className="bg-white dark:bg-slate-800 border-t-4 border-red-800 dark:border-red-600 border-l border-r border-b border-slate-200 dark:border-slate-700 rounded-sm p-6 shadow-sm transition-shadow">
+                      <div className="mb-4 flex flex-wrap gap-2 items-center">
+                        <span className="text-xs font-mono font-bold text-white bg-slate-900 dark:bg-slate-700 px-2.5 py-1 rounded">{paper.displayYear}</span>
+                        <span className="text-xs font-sans font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded border border-slate-200 dark:border-slate-600 uppercase tracking-wider">{paper.categoryName}</span>
+                        {paper.design && (
+                          <span className="inline-flex items-center text-[11px] font-sans font-bold text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 px-2 py-1 rounded uppercase tracking-wider">
+                            <Tag className="w-3 h-3 mr-1 opacity-70" /> {paper.design}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white mb-4">{paper.title}</h3>
+                      
+                      <div className="space-y-4">
+                        {(paper.journal || paper.articleTitle) && (
+                          <div className="mb-2">
+                            {paper.journal && (
+                              <div className="flex items-center text-red-800/90 dark:text-red-300 font-serif italic mb-2 inline-flex px-3 py-1.5 rounded-sm bg-red-50/50 dark:bg-red-900/30 border border-red-100/50 dark:border-red-800/50">
+                                <BookOpen className="w-4 h-4 mr-2 opacity-80 flex-shrink-0" />
+                                <span className="font-semibold text-[15px]">{paper.journal}</span>
+                              </div>
+                            )}
+                            {paper.articleTitle && (
+                              <h4 className="font-serif text-slate-800 dark:text-slate-200 font-bold text-[17px] leading-relaxed">
+                                {paper.articleTitle}
+                              </h4>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="border-l-4 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 p-4">
+                          <span className="font-bold text-slate-800 dark:text-slate-300 block mb-1 text-sm tracking-wide uppercase">Abstract & Background</span>
+                          <p className="font-serif text-slate-700 dark:text-slate-300 leading-relaxed text-[15px]">
+                            {paper.summary}
+                          </p>
+                        </div>
+                        {paper.outcome && (
+                          <div className="border-l-4 border-red-800 dark:border-red-600 bg-red-50/40 dark:bg-red-900/10 p-4">
+                            <span className="font-bold text-red-900 dark:text-red-400 flex items-center mb-1 text-sm tracking-wide uppercase">
+                              <CheckCircle className="w-4 h-4 mr-1.5 text-red-800 dark:text-red-500" /> Primary Outcome
+                            </span>
+                            <p className="font-serif text-slate-900 dark:text-slate-200 leading-relaxed text-[15px]">
+                              {paper.outcome}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* 搜尋結果的按鈕區 */}
+                        <div className="flex flex-wrap gap-3 pt-3 border-t border-slate-100 dark:border-slate-700 mt-4">
+                          <a href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(paper.articleTitle || paper.title)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 px-3 py-2 rounded transition-colors border border-slate-200 dark:border-slate-600">
+                            <ExternalLink className="w-4 h-4 mr-1.5" /> ↗ PubMed 搜尋
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-sm">
+                  <div className="inline-flex justify-center items-center w-16 h-16 bg-slate-50 dark:bg-slate-700 rounded-full mb-4 border border-slate-100 dark:border-slate-600">
+                    <Search className="w-8 h-8 text-slate-300 dark:text-slate-500" />
+                  </div>
+                  <p className="text-slate-800 dark:text-slate-200 font-serif text-xl font-bold mb-2">No results found</p>
+                  <p className="text-slate-500 dark:text-slate-400 font-sans">請嘗試使用其他關鍵字、縮寫或年份進行搜尋</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* 分類網格 */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+              {nephrologyData.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category)}
+                  className="text-left bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-sm shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-red-800 dark:hover:border-red-500 transition-all duration-300 group flex flex-col relative overflow-hidden"
+                >
+                  <div className="absolute top-0 left-0 w-full h-1 bg-slate-200 dark:bg-slate-700 group-hover:bg-red-800 dark:group-hover:bg-red-500 transition-colors"></div>
+
+                  <div className="flex items-start mb-5">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded group-hover:bg-red-50 dark:group-hover:bg-slate-700 transition-colors border border-slate-100 dark:border-slate-600 group-hover:border-red-100 dark:group-hover:border-red-500/30">
+                      {category.icon}
+                    </div>
+                    <div className="ml-4 mt-1">
+                      <h3 className="text-xl sm:text-2xl font-serif font-bold text-slate-900 dark:text-white group-hover:text-red-800 dark:group-hover:text-red-400 transition-colors leading-tight">
+                        {category.title}
+                      </h3>
+                      <span className="text-sm font-sans font-medium text-slate-500 dark:text-slate-400 mt-1 block tracking-wide">{category.subtitle}</span>
+                    </div>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 font-serif leading-relaxed mb-8 flex-grow text-[15px]">
+                    {category.description}
+                  </p>
+                  
+                  <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-700 pt-5 mt-auto">
+                    <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 tracking-wider uppercase">Contains {category.papers.length} Trials</span>
+                    <span className="text-red-800 dark:text-red-400 font-bold font-sans text-sm flex items-center group-hover:translate-x-1 transition-transform">
+                      Explore <ArrowLeft className="w-4 h-4 ml-1.5 rotate-180" />
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  };
+
+  return (
+    <div className={isDarkMode ? 'dark' : ''}>
+      {renderContent()}
+
+      {/* 右下角工具面板：值班深色模式切換 + 作者標記 */}
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-3 pointer-events-none">
+        
+        {/* Dark Mode Toggle */}
+        <button 
+          onClick={() => setIsDarkMode(!isDarkMode)}
+          className="p-3 rounded-full bg-white dark:bg-slate-800 text-slate-600 dark:text-yellow-400 shadow-lg border border-slate-200 dark:border-slate-600 pointer-events-auto hover:scale-110 transition-transform flex items-center justify-center"
+          title={isDarkMode ? "切換至明亮模式" : "切換至值班(深色)模式"}
+        >
+          {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
+
+        {/* 作者標記 */}
+        <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-serif font-bold px-4 py-2.5 rounded-sm shadow-lg border border-slate-300 dark:border-slate-600 pointer-events-auto hover:text-red-800 dark:hover:text-red-400 transition-colors">
+          鄧子聰醫師整理
+        </div>
+      </div>
+
+      {/* QR Code 專屬名片 Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => setShowQRModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-sm shadow-2xl max-w-sm w-full overflow-hidden border-t-4 border-red-800 dark:border-red-600" onClick={e => e.stopPropagation()}>
+            <div className="p-6 text-center border-b border-slate-100 dark:border-slate-700">
+              <BookOpen className="w-10 h-10 text-red-800 dark:text-red-500 mx-auto mb-3" />
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white font-serif mb-1">腎臟科 Landmark 資料庫</h3>
+            </div>
+            <div className="p-8 text-center bg-slate-50 dark:bg-slate-900">
+              <div className="bg-white p-4 rounded-md shadow-sm inline-block mb-4 border border-slate-200">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.href)}&margin=10`} 
+                  alt="Database QR Code" 
+                  className="w-48 h-48"
+                />
+              </div>
+              <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-6">掃描 QR Code 立即存取隨身資料庫</p>
+              <button 
+                onClick={() => setShowQRModal(false)}
+                className="w-full py-3 rounded-sm bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold transition-colors"
+              >
+                關閉
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
